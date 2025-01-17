@@ -41,7 +41,7 @@ class collectionsTracker {
     }
 
     async configureRevisions(db: database) {
-        const revisionsPreview = await new getRevisionsPreviewCommand({
+        const revisionsPreview = await new getRevisionsPreviewCommand.default({
             databaseName: db.name,
             start: 0,
             pageSize: 0,

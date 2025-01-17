@@ -185,7 +185,7 @@ function getManageServerMenuItem() {
         new separatorMenuItem('Debug'),
         new leafMenuItem({
             route: 'admin/settings/adminLogs',
-            moduleId: bridgeToReact(AdminLogs, "nonShardedView"),
+            moduleId: reactUtils.bridgeToReact(AdminLogs.default, "nonShardedView"),
             title: 'Admin Logs',
             nav: true,
             css: 'icon-admin-logs',

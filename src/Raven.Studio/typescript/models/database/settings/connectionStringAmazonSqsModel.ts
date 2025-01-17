@@ -85,7 +85,7 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
             case "passwordless":
                 return "Passwordless";
             default:
-                assertUnreachable(authenticationType);
+                assertUnreachable.default(authenticationType);
         }
     }
     
@@ -149,7 +149,7 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
                     Passwordless: true,
                 }
             default:
-                assertUnreachable(authenticationType);
+                assertUnreachable.default(authenticationType);
         }
     }
     

@@ -60,7 +60,7 @@ import getStudioBootstrapCommand = require("commands/resources/getStudioBootstra
 import serverSettings = require("common/settings/serverSettings");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import StudioSearchWithDatabaseSwitcher = require("components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher");
-import { HelpAndResourcesWidget } from "components/common/helpAndResources/HelpAndResourcesWidget";
+import HelpAndResourcesWidget = require("components/common/helpAndResources/HelpAndResourcesWidget");
 
 class shell extends viewModelBase {
 
@@ -131,7 +131,7 @@ class shell extends viewModelBase {
     isUpgradeModalVisible = ko.observable<boolean>(false);
 
     studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher.default>;
-    helpAndResourcesWidgetView: ReactInKnockout<typeof HelpAndResourcesWidget>;
+    helpAndResourcesWidgetView: ReactInKnockout<typeof HelpAndResourcesWidget.HelpAndResourcesWidget>;
     
     constructor() {
         super();
@@ -273,7 +273,7 @@ class shell extends viewModelBase {
             }
         });
         
-        this.helpAndResourcesWidgetView = ko.pureComputed(() => ({ component: HelpAndResourcesWidget }));
+        this.helpAndResourcesWidgetView = ko.pureComputed(() => ({ component: HelpAndResourcesWidget.HelpAndResourcesWidget }));
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.

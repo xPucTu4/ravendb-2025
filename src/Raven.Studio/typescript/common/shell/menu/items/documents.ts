@@ -5,7 +5,6 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import DocumentIdentities = require("components/pages/database/documents/identities/DocumentIdentities");
 import reactUtils = require("common/reactUtils");
 import AllRevisions = require("components/pages/database/documents/allRevisions/AllRevisions");
-import { bridgeToReact } from "common/reactUtils";
 
 export = getDocumentsMenuItem;
 
@@ -25,7 +24,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: "databases/documents/revisions/all",
-            moduleId: bridgeToReact(AllRevisions, "shardedView"),
+            moduleId: reactUtils.bridgeToReact(AllRevisions.default, "shardedView"),
             shardingMode: "allShards",
             title: "All Revisions",
             nav: false,
