@@ -26,6 +26,7 @@ import { components, OptionProps } from "react-select";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
 import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
 import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
+import AiConnectionString from "components/pages/database/settings/connectionStrings/editForms/AiConnectionString";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -153,6 +154,8 @@ function getEditConnectionStringComponent(type: StudioEtlType): (props: EditConn
             return AzureQueueStorageConnectionString;
         case "AmazonSqs":
             return AmazonSqsConnectionString;
+        case "Ai":
+            return AiConnectionString;
         default:
             return null;
     }
@@ -227,6 +230,13 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             icon: "amazon-sqs",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
+        },
+        {
+            value: "Ai",
+            label: "AI",
+            icon: "question", // TODO kalczur: replace with AI icon
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasAiEtl,
         },
     ];
 }
