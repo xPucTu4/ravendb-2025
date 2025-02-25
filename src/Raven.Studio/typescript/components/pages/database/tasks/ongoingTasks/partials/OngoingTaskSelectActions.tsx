@@ -11,9 +11,9 @@ import {
     Spinner,
     DropdownMenu,
     DropdownItem,
-    Button,
 } from "reactstrap";
 import { OngoingTaskOperationConfirmType } from "../../shared/OngoingTaskOperationConfirm";
+import Button from "react-bootstrap/Button";
 
 interface OngoingTaskSelectActionsProps {
     allTasks: number[];
@@ -83,7 +83,7 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                         </UncontrolledDropdown>
 
                         <ButtonWithSpinner
-                            color="danger"
+                            variant="danger"
                             onClick={() => onTaskOperation("delete")}
                             className="rounded-pill flex-grow-0"
                             isSpinning={isDeleting}
@@ -92,7 +92,7 @@ export default function OngoingTaskSelectActions(props: OngoingTaskSelectActions
                             Delete
                         </ButtonWithSpinner>
                     </ButtonGroup>
-                    <Button onClick={() => setSelectedTasks([])} color="link">
+                    <Button onClick={() => setSelectedTasks([])} variant="link">
                         Cancel
                     </Button>
                 </div>
