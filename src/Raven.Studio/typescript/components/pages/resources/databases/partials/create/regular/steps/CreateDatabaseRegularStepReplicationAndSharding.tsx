@@ -195,32 +195,32 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         </Col>
                         <Col sm="6">
                             <Collapse in={isSharded}>
-                              <div>
-                                <InputGroup>
-                                    <InputGroupText>Number of shards</InputGroupText>
-                                    <FormInput
-                                        type="number"
+                                <div>
+                                    <InputGroup>
+                                        <InputGroupText>Number of shards</InputGroupText>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="replicationAndShardingStep.shardsCount"
+                                            className="replication-input"
+                                            min="1"
+                                            max="100"
+                                        />
+                                    </InputGroup>
+                                    <FormSwitch
                                         control={control}
-                                        name="replicationAndShardingStep.shardsCount"
-                                        className="replication-input"
-                                        min="1"
-                                        max="100"
-                                    />
-                                </InputGroup>
-                                <FormSwitch
-                                    control={control}
-                                    name="replicationAndShardingStep.isPrefixesForShards"
-                                    color="primary"
-                                    className="mt-3"
-                                >
-                                    Add <strong>prefixes</strong> for shards
-                                    <br />
-                                    <small className="text-muted">
-                                        Manage document distribution by defining
-                                        <br />a prefix for document IDs
-                                    </small>
-                                </FormSwitch>
-                              </div>
+                                        name="replicationAndShardingStep.isPrefixesForShards"
+                                        color="primary"
+                                        className="mt-3"
+                                    >
+                                        Add <strong>prefixes</strong> for shards
+                                        <br />
+                                        <small className="text-muted">
+                                            Manage document distribution by defining
+                                            <br />a prefix for document IDs
+                                        </small>
+                                    </FormSwitch>
+                                </div>
                             </Collapse>
                         </Col>
                     </Row>
