@@ -25,7 +25,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { EmptySet } from "components/common/EmptySet";
 import { LoadError } from "components/common/LoadError";
-import { HStack } from "components/common/HStack";
+import { HStack } from "components/common/utilities/HStack";
 
 export default function IndexTerms({ pathParams }: ReactPathParamsProps) {
     const indexName = pathParams[0];
