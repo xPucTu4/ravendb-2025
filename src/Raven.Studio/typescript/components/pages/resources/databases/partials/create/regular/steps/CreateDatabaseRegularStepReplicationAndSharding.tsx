@@ -197,18 +197,18 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         <Col sm="6">
                             <Collapse in={isSharded}>
                                 <div>
-                                <InputGroup>
-                                    <InputGroup.Text>Number of shards</InputGroup.Text>
-                                    <FormInput
-                                        type="number"
-                                        control={control}
-                                        name="replicationAndShardingStep.shardsCount"
-                                        className="replication-input"
-                                        min="1"
-                                        max="100"
-                                    />
-                                </InputGroup>
-                                  <FormSwitch
+                                    <InputGroup>
+                                        <InputGroup.Text>Number of shards</InputGroup.Text>
+                                        <FormInput
+                                            type="number"
+                                            control={control}
+                                            name="replicationAndShardingStep.shardsCount"
+                                            className="replication-input"
+                                            min="1"
+                                            max="100"
+                                        />
+                                    </InputGroup>
+                                    <FormSwitch
                                         control={control}
                                         name="replicationAndShardingStep.isPrefixesForShards"
                                         color="primary"
