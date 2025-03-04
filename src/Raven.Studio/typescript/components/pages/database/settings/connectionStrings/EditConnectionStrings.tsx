@@ -188,7 +188,7 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             label: "AI",
             icon: "sparkles",
             licenseRequired: "Enterprise",
-            isDisabled: !features.hasAiIntegration,
+            isDisabled: !features.hasAiIntegrations,
         },
         {
             value: "Raven",
