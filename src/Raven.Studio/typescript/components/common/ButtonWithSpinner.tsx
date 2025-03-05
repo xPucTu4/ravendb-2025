@@ -1,10 +1,11 @@
 import React from "react";
-import { Button, ButtonProps, Spinner } from "reactstrap";
+import Spinner from "react-bootstrap/Spinner";
 import { Icon, IconProps } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
+import Button from "react-bootstrap/Button";
 
-interface ButtonWithSpinnerProps extends ButtonProps {
+interface ButtonWithSpinnerProps extends Button.BtnProps {
     isSpinning: boolean;
     icon?: IconName | IconProps;
     iconMargin?: string;
@@ -24,7 +25,7 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
                 <Icon {...icon} />
             );
     }
-
+    /* eslint-disable local-rules/no-reactstrap-Button-color-prop */
     return (
         <Button
             className={classNames({ "d-flex": children != null }, "align-items-center", className)}
@@ -40,4 +41,5 @@ export default function ButtonWithSpinner(props: ButtonWithSpinnerProps) {
             {children}
         </Button>
     );
+    /* eslint-enable local-rules/no-reactstrap-Button-color-prop */
 }

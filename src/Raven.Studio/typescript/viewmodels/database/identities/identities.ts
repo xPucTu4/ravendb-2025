@@ -10,9 +10,9 @@ import seedIdentityCommand = require("commands/database/identities/seedIdentityC
 import getClientConfigurationCommand = require("commands/resources/getClientConfigurationCommand");
 import getGlobalClientConfigurationCommand = require("commands/resources/getGlobalClientConfigurationCommand");
 import genUtils = require("common/generalUtils");
-import shardViewModelBase from "viewmodels/shardViewModelBase";
+import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
-import { sortBy } from "common/typeUtils";
+import typeUtils = require("common/typeUtils");
 
 class identity {
     prefix = ko.observable<string>();
@@ -190,7 +190,7 @@ class identities extends shardViewModelBase {
                         mappedIdentities.filter(x => x.prefix().toLocaleLowerCase().includes(this.filter().toLocaleLowerCase())) :
                         mappedIdentities;
 
-                    filteredIdentities = sortBy(filteredIdentities, x => x.prefix());
+                    filteredIdentities = typeUtils.sortBy(filteredIdentities, x => x.prefix());
 
                     task.resolve({
                         totalResultCount: filteredIdentities.length,

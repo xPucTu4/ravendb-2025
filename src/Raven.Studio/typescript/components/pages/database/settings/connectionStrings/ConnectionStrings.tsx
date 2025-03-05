@@ -1,5 +1,6 @@
-﻿import React, { useEffect } from "react";
-import { Button, Col, Row, UncontrolledTooltip } from "reactstrap";
+﻿import { useEffect } from "react";
+import { Col, Row } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -14,6 +15,7 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
 import { LoadError } from "components/common/LoadError";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
@@ -66,10 +68,15 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
                 <Col>
                     <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
                     {hasDatabaseAdminAccess && (
-                        <>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: hasNoneInLicense,
+                                message: "Your license does not allow you to add any connection string.",
+                            }}
+                        >
                             <div id={addNewButtonId} style={{ width: "fit-content" }}>
                                 <Button
-                                    color="primary"
+                                    variant="primary"
                                     onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
                                     title="Add new connection string"
                                     disabled={hasNoneInLicense}
@@ -78,12 +85,7 @@ export default function ConnectionStrings(props: ConnectionStringsUrlParameters)
                                     Add new
                                 </Button>
                             </div>
-                            {hasNoneInLicense && (
-                                <UncontrolledTooltip target={addNewButtonId}>
-                                    Your license does not allow you to add any connection string.
-                                </UncontrolledTooltip>
-                            )}
-                        </>
+                        </ConditionalPopover>
                     )}
                     <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                         {isEmpty ? (
