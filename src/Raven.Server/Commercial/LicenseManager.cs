@@ -1598,11 +1598,11 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            // todo: uncomment the code below after license work 
-            // if(LicenseStatus.HasSnowflakeEtl)
-            //     return;
-            // const string message = "Your current license doesn't include the Snowflake ETL feature";
-            // throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
+            if (LicenseStatus.HasSnowflakeEtl)
+                return;
+            
+            const string message = "Your current license doesn't include the Snowflake ETL feature";
+            throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
 
         public void AssertCanAddConcurrentDataSubscriptions()
@@ -1666,15 +1666,12 @@ namespace Raven.Server.Commercial
             {
                 if (startUp)
                     return true;
-                else
-                {
-                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
-                    throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
-                }
+                const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
+                throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
             }
 
             {
-                const string details = "Your current license doesn't include the monitoring feature.";
+                const string details = "Your current license doesn't include the OpenTelemetry feature.";
                 var exception = GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
 
                 if (startUp)

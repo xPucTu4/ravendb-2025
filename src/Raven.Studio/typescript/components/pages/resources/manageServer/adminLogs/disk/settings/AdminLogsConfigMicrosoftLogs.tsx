@@ -13,18 +13,11 @@ import {
 import { useAppDispatch, useAppSelector } from "components/store";
 import { logLevelOptions, tryHandleSubmit } from "components/utils/common";
 import { SubmitHandler, useForm } from "react-hook-form";
-import {
-    AccordionBody,
-    AccordionHeader,
-    AccordionItem,
-    Form,
-    FormGroup,
-    Label,
-    Table,
-    UncontrolledPopover,
-} from "reactstrap";
+import Table from "react-bootstrap/Table";
+import { AccordionBody, AccordionHeader, AccordionItem, Form, FormGroup, Label } from "reactstrap";
 import * as yup from "yup";
 import { Icon } from "components/common/Icon";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type MicrosoftLogsConfig = Raven.Client.ServerWide.Operations.Logs.GetLogsConfigurationResult["MicrosoftLogs"];
 
@@ -73,7 +66,7 @@ export default function AdminLogsConfigMicrosoftLogs({ targetId }: AdminLogsConf
                     </FormGroup>
                     <ButtonWithSpinner
                         type="submit"
-                        color="success"
+                        variant="success"
                         className="ms-auto"
                         icon="save"
                         isSpinning={formState.isSubmitting}
@@ -84,14 +77,9 @@ export default function AdminLogsConfigMicrosoftLogs({ targetId }: AdminLogsConf
                 </Form>
                 <h5 className="text-center text-muted text-uppercase">
                     Read-only
-                    <span id="read-only-tooltip-for-ms-logs">
+                    <PopoverWithHoverWrapper message="This setting is not editable here but can be configured through the server configuration.">
                         <Icon icon="info" color="info" margin="ms-1" />
-                    </span>
-                    <UncontrolledPopover target="read-only-tooltip-for-ms-logs" trigger="hover" className="bs5">
-                        <div className="p-3">
-                            This setting is not editable here but can be configured through the server configuration.
-                        </div>
-                    </UncontrolledPopover>
+                    </PopoverWithHoverWrapper>
                 </h5>
                 <Table className="m-0">
                     <tbody>

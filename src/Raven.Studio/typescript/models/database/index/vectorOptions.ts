@@ -1,8 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import jsonUtil = require("common/jsonUtil");
-import { exhaustiveStringTuple } from "components/utils/common";
+import common = require("components/utils/common");
 
-type VectorEmbeddingTypeWithoutText = Exclude<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType, "Text">
+type VectorEmbeddingTypeWithoutText = Exclude<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType, "Text">;
 
 class vectorOptions {
     dimensions = ko.observable<number>();
@@ -11,11 +11,11 @@ class vectorOptions {
     numberOfCandidatesForIndexing = ko.observable<number>();
     numberOfEdges = ko.observable<number>();
 
-    sourceEmbeddingTypes = exhaustiveStringTuple<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>()(
+    sourceEmbeddingTypes = common.exhaustiveStringTuple<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>()(
         "Single", "Int8", "Text", "Binary"
     )
 
-    destinationEmbeddingTypes = exhaustiveStringTuple<VectorEmbeddingTypeWithoutText>()(
+    destinationEmbeddingTypes = common.exhaustiveStringTuple<VectorEmbeddingTypeWithoutText>()(
         "Single", "Int8", "Binary"
     )
 
@@ -70,17 +70,29 @@ class vectorOptions {
                 this.destinationEmbeddingType(value);
             }
         });
-
-        this.destinationEmbeddingType.subscribe((value) => {
-            if (value === "Int8" || value === "Binary") {
-                this.sourceEmbeddingType(value);
-            }
-        })
     }
 
     private initValidation() {
         this.destinationEmbeddingType.extend({
             required: true,
+            validation: [
+                {
+                    validator: (destValue: string) => {
+                        const srcValue = this.sourceEmbeddingType();
+                        const allowedMappings = {
+                            "Text": ["Single", "Int8", "Binary"],
+                            "Single": ["Single", "Int8", "Binary"],
+                            "Int8": ["Int8"],
+                            "Binary": ["Binary"],
+                        };
+                        if (!srcValue) {
+                            return true;
+                        }
+                        return allowedMappings[srcValue] && allowedMappings[srcValue].indexOf(destValue) !== -1;
+                    },
+                    message: "Destination embedding type is invalid for the selected source embedding type.",
+                },
+            ],
         });
 
         this.sourceEmbeddingType.extend({

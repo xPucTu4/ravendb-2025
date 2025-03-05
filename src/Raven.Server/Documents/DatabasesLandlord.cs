@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -804,12 +805,11 @@ namespace Raven.Server.Documents
             if (DatabasesCache.TryGetValue(databaseName, out database))
             {
                 if (database.IsFaulted)
-                {
                     // If a database was unloaded, this is what we get from DatabasesCache.
                     // We want to keep the exception there until UnloadAndLockDatabase is disposed.
                     if (IsLockedDatabase(database.Exception))
                         return true;
-                }
+
 
                 if (database.IsFaulted || database.IsCanceled)
                 {
@@ -1311,12 +1311,9 @@ namespace Raven.Server.Documents
 
                 // DateTime should be only null in tests
                 if (idleDatabaseActivity is { DateTime: not null })
-                    _wakeupTimers.TryAdd(databaseName.Value, new Timer(
-                        callback: _ => NextScheduledActivityCallback(databaseName.Value, idleDatabaseActivity),
-                        state: null,
-                        // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
-                        dueTime: idleDatabaseActivity.DueTime > 0 ? idleDatabaseActivity.DueTime : 0,
-                        period: Timeout.Infinite));
+                {
+                    AddOrUpdateWakeupTimer(databaseName.Value, idleDatabaseActivity);
+                }
 
                 if (_logger.IsDebugEnabled)
                 {
@@ -1348,6 +1345,20 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void AddOrUpdateWakeupTimer(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
+        {
+            // in case the DueTime is negative or zero, the callback will be called immediately and database will be loaded.
+            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
+
+            _wakeupTimers.AddOrUpdate(databaseName,
+                _ => newTimer,
+                (_, timer) =>
+                {
+                    timer.Dispose();
+                    return newTimer;
+                });
+        }
+
         private static void LogUnloadFailureReason(StringSegment databaseName, string reason)
         {
             if (_logger.IsDebugEnabled)
@@ -1356,16 +1367,15 @@ namespace Raven.Server.Documents
 
         public void RescheduleNextIdleDatabaseActivity(string databaseName, IdleDatabaseActivity idleDatabaseActivity)
         {
-            if (_wakeupTimers.TryGetValue(databaseName, out var oldTimer))
+            if (idleDatabaseActivity == null)
             {
-                oldTimer.Dispose();
+                if (_wakeupTimers.TryRemove(databaseName, out var oldTimer))
+                    oldTimer.Dispose();
+
+                return;
             }
 
-            if (idleDatabaseActivity == null)
-                return;
-
-            var newTimer = new Timer(_ => NextScheduledActivityCallback(databaseName, idleDatabaseActivity), null, idleDatabaseActivity.DueTime, Timeout.Infinite);
-            _wakeupTimers.AddOrUpdate(databaseName, _ => newTimer, (_, __) => newTimer);
+            AddOrUpdateWakeupTimer(databaseName, idleDatabaseActivity);
         }
 
         private void NextScheduledActivityCallback(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
@@ -1410,23 +1420,62 @@ namespace Raven.Server.Documents
                             break;
 
                         case IdleDatabaseActivityType.WakeUpDatabase:
+                            if (_serverStore.ConcurrentBackupsCounter.CanRunBackup(ShardHelper.ToDatabaseName(databaseName)) == false)
+                            {
+                                // reached max concurrent backups
+                                var delayInMs = RescheduleDatabaseWakeup();
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached " +
+                                                 $"max concurrent backups ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry the wakeup in {delayInMs:#,#;;0}ms");
+                                break;
+                            }
+
+                            if (BackupUtils.CanServerRunBackup(_serverStore) == false)
+                            {
+                                // the server cannot run the backup anyway (low memory, low cpu credits or high dirty memory state)
+                                var delayInMs = RescheduleDatabaseWakeup();
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we are in a low memory state, " +
+                                                 $"will retry the wakeup in {delayInMs:#,#;;0}ms");
+                                break;
+                            }
+
+                            var startDatabaseForBackup = _serverStore.ConcurrentBackupsCounter.TryStartDatabaseForBackup();
+                            if (startDatabaseForBackup == null)
+                            {
+                                // reached max concurrent loading of databases for backup
+                                var delayInMs = RescheduleDatabaseWakeup();
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Delaying the start of the database '{databaseName}' for running a backup because we reached max concurrent loading of databases " +
+                                                 $"for backup ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry the wakeup in {delayInMs:#,#;;0}ms");
+                            }
+                            else
+                            {
                             _ = TryGetOrCreateResourceStore(databaseName, nextIdleDatabaseActivity.DateTime).ContinueWith(t =>
                             {
+                                    startDatabaseForBackup.Dispose();
+
                                 var ex = t.Exception.ExtractSingleInnerException();
                                 if (ex is DatabaseConcurrentLoadTimeoutException e)
                                 {
-                                    // database failed to load, retry after 1 min
-
+                                        // database failed to load
+                                        var delayInMs = RescheduleDatabaseWakeup();
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Failed to start database '{databaseName}' on timer, will retry the wakeup in '{_dueTimeOnRetry}' ms", e);
+                                            _logger.Info($"Failed to start database '{databaseName}' for running a backup, will retry the wakeup in {delayInMs:#,#;;0}ms", e);
+                                    }
+                                });
+                            }
+                            break;
 
-                                    nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(_dueTimeOnRetry);
+                            int RescheduleDatabaseWakeup()
+                            {
                                     ForTestingPurposes?.RescheduleDatabaseWakeupMre?.Set();
 
+                                var delayInMs = _dueTimeOnRetry + Random.Shared.Next(0, _dueTimeOnRetry);
+                                nextIdleDatabaseActivity.DateTime = DateTime.UtcNow.AddMilliseconds(delayInMs);
                                     RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                                return delayInMs;
                                 }
-                            }, TaskContinuationOptions.OnlyOnFaulted);
-                            break;
                     }
                 }
                 finally

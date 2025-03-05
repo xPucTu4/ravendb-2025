@@ -12,8 +12,8 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import { highlight, languages } from "prismjs";
-import shardViewModelBase from "viewmodels/shardViewModelBase";
+import prismjs = require("prismjs");
+import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
 
 class revisionsBin extends shardViewModelBase {
@@ -136,7 +136,7 @@ class revisionsBin extends shardViewModelBase {
                     const value = column.getCellValue(doc);
                     if (value !== undefined) {
                         const json = JSON.stringify(value, null, 4);
-                        const html = highlight(json, languages.javascript, "js");
+                        const html = prismjs.highlight(json, prismjs.languages.javascript, "js");
                         onValue(html, json);
                     }
                 }
@@ -149,26 +149,30 @@ class revisionsBin extends shardViewModelBase {
 
         eventsCollector.default.reportEvent("revisionsBin", "delete-selected");
         
-        this.confirmationMessage("Are you sure?", "Do you want to delete selected items and its revisions?", {
-            buttons: ["Cancel", "Yes, delete"]
-        })
+        this.confirmationMessage("Delete Revisions?",
+            `The selected "Delete Revision" items will be removed,<br/> 
+            and all their associated revisions will be permanently deleted.<br/><br/> 
+            This action cannot be undone.`,
+            {
+                buttons: ["Cancel", "Yes, delete"],
+                html: true
+            })
             .done(result => {
                 if (result.can) {
-
                     this.spinners.delete(true);
 
                     const parameters: Raven.Client.Documents.Operations.Revisions.DeleteRevisionsOperation.Parameters = {
                         DocumentIds: selectedIds,
                         RevisionsChangeVectors: [],
                         RemoveForceCreatedRevisions: true,
-                    }
+                    };
 
                     new deleteRevisionsForDocumentsCommand(this.db?.name, parameters)
                         .execute()
                         .always(() => {
                             this.spinners.delete(false);
                             this.gridController().reset(false);
-                        });
+                    });
                 }
             });
     }
