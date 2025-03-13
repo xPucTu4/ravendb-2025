@@ -1,5 +1,4 @@
 ﻿import router = require("plugins/router");
-import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
 
 type gtagFn = (key: string, value: any, params?: any) => void;
 
