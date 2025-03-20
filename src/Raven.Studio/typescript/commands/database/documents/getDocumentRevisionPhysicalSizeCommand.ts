@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 
-type DocumentRevisionPhysicalSizeCommandResult = Raven.Server.Documents.Handlers.SizeDetails & {
+type DocumentRevisionPhysicalSizeCommandResult = Raven.Client.Documents.Commands.SizeDetails & {
     ChangeVector: string;
   };
 
