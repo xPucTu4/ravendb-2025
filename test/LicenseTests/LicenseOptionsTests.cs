@@ -252,7 +252,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         var exception = Assert.Throws(typeof(AggregateException), () =>
             StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -275,7 +275,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         var exception = Assert.Throws(typeof(AggregateException), () =>
             StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -297,7 +297,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         var exception = Assert.Throws(typeof(AggregateException), () =>
             StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -318,7 +318,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         var exception = Assert.Throws(typeof(AggregateException), () =>
             StartEmbeddedServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -718,7 +718,7 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
         var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
             StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out _));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -740,7 +740,7 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
         var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
             StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicenseConfigurationKey, out _));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -762,7 +762,7 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
         var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
             StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);
@@ -783,7 +783,7 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
         var exception = Assert.Throws(typeof(ServerLoadFailureException), () =>
             StartTestDriverServerLicenseOptionTestWithDefaultThrowOnInvalidOrMissingLicenseValue(LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
 
-        var expectedMessageBuilder = new LicenseHelper.LicenseVerificationErrorBuilder();
+        var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
         expectedMessageBuilder.AppendLicenseMissingMessage();
 
         expectedMessageBuilder.AppendConfigurationKeyUsageAttempt(LicenseOptionTestHelper.LicenseConfigurationKey);

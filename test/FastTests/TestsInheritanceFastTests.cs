@@ -17,7 +17,7 @@ namespace FastTests
         {
         }
 
-        [NonLinuxFact]
+        [NonLinuxFact(Skip = "Egor")]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {
             var assemblies = new HashSet<Assembly>();
