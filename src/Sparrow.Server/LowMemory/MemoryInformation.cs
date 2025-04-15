@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Collections;
@@ -11,6 +9,7 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Posix.macOS;
 using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Platform.Win32;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using NativeMemory = Sparrow.Utils.NativeMemory;
@@ -31,12 +30,17 @@ namespace Sparrow.LowMemory
 
         private static readonly int ProcessId;
 
+        private static readonly IntPtr ProcessHandle = IntPtr.Zero;
+
         public static readonly Size TotalPhysicalMemory;
 
         static MemoryInformation()
         {
             using (var process = Process.GetCurrentProcess())
                 ProcessId = process.Id;
+
+            if (PlatformDetails.RunningOnWindows)
+                ProcessHandle = Win32MemoryQueryMethods.GetCurrentProcess();
 
             TotalPhysicalMemory = GetMemoryInfo().TotalPhysicalMemory;
         }
@@ -193,7 +197,7 @@ namespace Sparrow.LowMemory
             SecurityLimitInformation = 5,
             GroupInformation = 11
         }
-        
+
         [StructLayout(LayoutKind.Sequential)]
         struct JOBOBJECT_BASIC_LIMIT_INFORMATION
         {
@@ -207,7 +211,7 @@ namespace Sparrow.LowMemory
             public UInt32 PriorityClass;
             public UInt32 SchedulingClass;
         }
-        
+
         [Flags]
         public enum JOBOBJECTLIMIT : uint
         {
@@ -235,7 +239,7 @@ namespace Sparrow.LowMemory
             JobWriteBytes = 0x00020000,
             RateControl = 0x00040000,
         }
-        
+
         [StructLayout(LayoutKind.Sequential)]
         struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
         {
@@ -257,8 +261,11 @@ namespace Sparrow.LowMemory
             public UInt64 WriteTransferCount;
             public UInt64 OtherTransferCount;
         }
-        
-        
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool IsProcessInJob(IntPtr hProcess, IntPtr hJob, out bool isInJob);
+
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll")]
         public static extern unsafe bool QueryInformationJobObject(IntPtr hJob, JOBOBJECTINFOCLASS JobObjectInformationClass, void* lpJobObjectInformation,
@@ -284,9 +291,9 @@ namespace Sparrow.LowMemory
                     bufferedReader.ReadFileIntoBuffer();
                     var vmrss = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmRss);
                     var vmswap = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmSwap);
-                    
+
                     // value is in KB, we need to return bytes
-                    return (vmrss * 1024, vmswap * 1024); 
+                    return (vmrss * 1024, vmswap * 1024);
                 }
             }
             catch (Exception ex)
@@ -493,13 +500,13 @@ namespace Sparrow.LowMemory
                 TotalPhysicalMemory = fromProcMemInfo.TotalMemory,
                 InstalledMemory = fromProcMemInfo.TotalMemory,
                 WorkingSet = workingSet,
-                
+
                 TotalSwapSize = fromProcMemInfo.TotalSwap,
                 TotalSwapUsage = swapUsage,
                 WorkingSetSwapUsage = fromProcMemInfo.WorkingSetSwap,
-                
+
                 IsExtended = extended,
-                Remarks = constrainedByCgroups ? "Memory constrained by cgroups limits" :  null
+                Remarks = constrainedByCgroups ? "Memory constrained by cgroups limits" : null
             };
         }
 
@@ -605,58 +612,61 @@ namespace Sparrow.LowMemory
             var availableMemoryForProcessingInBytes = memoryStatusUllAvailPhys + sharedCleanInBytes;
 
             string remarks = null;
-            JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
-            if (QueryInformationJobObject(IntPtr.Zero, 
-                    JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits, 
-                    sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
-                    out int limitsOutputSize) == false || 
-                limitsOutputSize != sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
+            if (IsProcessInJob(ProcessHandle, IntPtr.Zero, out var isInJob) && isInJob)
             {
-                if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
+                if (QueryInformationJobObject(IntPtr.Zero,
+                        JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits,
+                        sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
+                        out int limitsOutputSize) == false ||
+                    limitsOutputSize != sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
                 {
-                    _reportedQueryJobObjectFailure = true;
-                    Logger.Info(
-                        $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
-                }
-            }
-            else
-            {
-                long maxSize = long.MaxValue;
-                if (limits.BasicLimitInformation.MaximumWorkingSetSize != UIntPtr.Zero)
-                {
-                    maxSize = (long)limits.BasicLimitInformation.MaximumWorkingSetSize;
-                }
-
-                if (limits.ProcessMemoryLimit != UIntPtr.Zero)
-                {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
-                }
-                
-                if (limits.JobMemoryLimit != UIntPtr.Zero)
-                {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
-                }
-
-                if (maxSize != long.MaxValue)
-                {
-                    long workingSet64;
-                    if (process == null)
+                    if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
                     {
-                        using (var p = Process.GetCurrentProcess())
+                        _reportedQueryJobObjectFailure = true;
+                        Logger.Info(
+                            $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                    }
+                }
+                else
+                {
+                    long maxSize = long.MaxValue;
+                    if (limits.BasicLimitInformation.MaximumWorkingSetSize != UIntPtr.Zero)
+                    {
+                        maxSize = (long)limits.BasicLimitInformation.MaximumWorkingSetSize;
+                    }
+
+                    if (limits.ProcessMemoryLimit != UIntPtr.Zero)
+                    {
+                        maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
+                    }
+
+                    if (limits.JobMemoryLimit != UIntPtr.Zero)
+                    {
+                        maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
+                    }
+
+                    if (maxSize != long.MaxValue)
+                    {
+                        long workingSet64;
+                        if (process == null)
                         {
-                            workingSet64 = p.WorkingSet64;
+                            using (var p = Process.GetCurrentProcess())
+                            {
+                                workingSet64 = p.WorkingSet64;
+                            }
                         }
-                    }
-                    else
-                    {
-                        workingSet64 = process.WorkingSet64;
-                    }
+                        else
+                        {
+                            workingSet64 = process.WorkingSet64;
+                        }
 
-                    availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet64, 0);
-                    availPageFile = Math.Max(maxSize - workingSet64, 0);
-                    totalPageFile = maxSize;
-                    memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
-                    remarks = "Memory limited by Job Object limits";
+                        availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet64, 0);
+                        availPageFile = Math.Max(maxSize - workingSet64, 0);
+                        totalPageFile = maxSize;
+                        memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
+                        remarks = "Memory limited by Job Object limits";
+                    }
                 }
             }
 
@@ -744,7 +754,7 @@ namespace Sparrow.LowMemory
 
             return new DirtyMemoryState
             {
-                IsHighDirty = totalScratchMemory > 
+                IsHighDirty = totalScratchMemory >
                               TotalPhysicalMemory * LowMemoryNotification.Instance.TemporaryDirtyMemoryAllowedPercentage,
                 TotalDirty = totalScratchMemory
             };
