@@ -151,6 +151,7 @@ for (var i = 0; i < attachments.length; i++) {
                         session.SaveChanges();
                     }
                 }
+                WaitForUserToContinueTheTest(dest);
                 var etlDone2 = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 4);
                 Assert.True(etlDone2.Wait(TimeSpan.FromMinutes(1)));
 
@@ -227,6 +228,7 @@ for (var i = 0; i < attachments.length; i++) {
 
                     session.SaveChanges();
                 }
+                WaitForUserToContinueTheTest(dest);
 
                 var etlDone2 = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 2);
                 Assert.True(etlDone2.Wait(TimeSpan.FromMinutes(1)));
