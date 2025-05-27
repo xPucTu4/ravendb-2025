@@ -271,10 +271,11 @@ function LicenseTitle({ licenseTextType: licenseType, licenseClass }: LicenseTit
 }
 
 export default function FeatureAvailabilitySummaryWrapper({
-    isUnlimited,
     data,
-}: FeatureAvailabilitySummaryProps & { isUnlimited: boolean }) {
-    const { value: isOpen, toggle: toggleIsOpen } = useBoolean(false); // TODO kalczur: maybe !isUnlimited
+    isUnlimited,
+    isOpenedByDefault = !isUnlimited,
+}: FeatureAvailabilitySummaryProps & { isUnlimited: boolean; isOpenedByDefault?: boolean }) {
+    const { value: isOpen, toggle: toggleIsOpen } = useBoolean(isOpenedByDefault);
 
     return (
         <>
