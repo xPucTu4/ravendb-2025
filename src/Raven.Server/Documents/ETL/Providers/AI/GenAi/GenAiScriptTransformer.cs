@@ -22,14 +22,13 @@ namespace Raven.Server.Documents.ETL.Providers.AI.GenAi;
 internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiScriptResult, GenAiStatsScope, GenAiPerformanceOperation>
 {
     private readonly GenAiConfiguration _configuration;
-    private readonly byte[] _configurationPartialHash;
+    private byte[] _configurationPartialHash;
     private readonly PatchRequest _mainScript;
     private List<GenAiScriptResult> _currentRun;
     
     public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
-        _configurationPartialHash = GetInitialHash(_configuration);
         _mainScript = new PatchRequest(transformation.Script, PatchRequestType.GenAi);
     }
 
@@ -45,6 +44,8 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
         var contextFunc = new ClrFunction(DocumentScript.ScriptEngine, "context", AddContext);
         DocumentScript.ScriptEngine.SetValue("context", contextFunc);
+
+        _configurationPartialHash = GetInitialHash(_configuration);
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -138,6 +139,9 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
         static void UpdateHashString(byte* state, string str)
         {
+            if (string.IsNullOrEmpty(str))
+                return;
+
             fixed (char* p = str)
             {
                 if (Sodium.crypto_generichash_update(state, (byte*)p, (ulong)(str.Length * sizeof(char))) != 0)

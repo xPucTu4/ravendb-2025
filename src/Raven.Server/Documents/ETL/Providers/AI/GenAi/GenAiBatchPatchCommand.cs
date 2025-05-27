@@ -157,6 +157,26 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
         {
             // we already have the hashes section, need to modify it
 
+            if (hashes.TryGet(taskName, out BlittableJsonReaderArray existingHashes) && existingHashes != null && 
+                existingHashes.Length == allHashes.Count)
+            {
+                bool needToUpdate = false;
+
+                foreach (var hash in existingHashes)
+                {
+                    if (allHashes.Contains(hash.ToString())) 
+                        continue;
+
+                    // we have a new hash that is not in the existing hashes
+                    needToUpdate = true;
+                    break;
+                }
+
+                if (needToUpdate == false)
+                    return doc; // we already have the hashes for this task, no need to update
+            }
+
+
             hashes.Modifications = new DynamicJsonValue(hashes)
             {
                 [taskName] = allHashes
