@@ -286,7 +286,7 @@ export default function FeatureAvailabilitySummaryWrapper({
                 onClick={toggleIsOpen}
             >
                 <h2 className="accordion-header">
-                    <button type="button" aria-expanded="true" className="accordion-button new-tab-button">
+                    <button type="button" aria-expanded="true" className="accordion-button open-modal-button">
                         <Icon
                             icon="license"
                             color={isUnlimited ? "success" : "warning"}

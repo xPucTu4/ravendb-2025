@@ -334,6 +334,7 @@ const allIconNames: IconName[] = [
     "ongoing-tasks",
     "onnx",
     "openai",
+    "open-modal",
     "orchestrator",
     "order",
     "os",

@@ -409,9 +409,9 @@ select {
     }
 }
 
-.new-tab-button {
+.open-modal-button {
     &::after {
-        content: "newtab" !important;
+        content: "open-modal" !important;
         transform: none !important;
     }
 }
