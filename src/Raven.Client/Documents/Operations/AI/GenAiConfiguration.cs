@@ -28,8 +28,12 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     public string JsonSchema { get; set; }
     public string SampleObject { get; set; }
     public string UpdateScript { get; set; }
-    
+
+    public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
+
     private List<Transformation> _transforms;
+
+    private const int DefaultMaxConcurrency = 4;
 
     [JsonDeserializationIgnore]
     [JsonIgnore]
@@ -99,6 +103,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(JsonSchema)] = JsonSchema;
         json[nameof(UpdateScript)] = UpdateScript;
         json[nameof(GenAiTransformation)] = GenAiTransformation.ToJson();
+        json[nameof(MaxConcurrency)] = MaxConcurrency;
 
         return json;
     }

@@ -24,8 +24,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
-using Sparrow.Server.Utils;
-using Encoding = System.Text.Encoding;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 #pragma warning disable SKEXP0001
@@ -38,13 +36,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     public const string GenAiTaskTag = "Gen/AI";
 
     private const string TestDocumentId = "GenAi/TestDocument";
-    private int _fallbackCounter = 0;
+    private int _maxConcurrency;
     private AbstractChatCompletionClient _chatCompletionClient;
 
     public GenAiTask(Transformation transformation, GenAiConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, GenAiTaskTag)
     {
         Metrics = new EtlMetricsCountersManager();
+        _maxConcurrency = configuration.MaxConcurrency;
 
         if (configuration.TestMode == false)
             _chatCompletionClient = GetClient();
@@ -120,7 +119,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
-        if (e is RateLimitException rateLimitException)
+        if (e is AggregateException ae &&
+            ae.InnerExceptions.OfType<RateLimitException>().FirstOrDefault() is { } rateLimitException)
         {
             FallbackTime = rateLimitException.RetryAfter;
             return;
@@ -141,13 +141,16 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         if (exceptions?.Count > 0)
         {
-            foreach (var e in exceptions)
-            {
-                if (e is RefusedToAnswerException or TooManyTokensException)
-                    continue;
+            _maxConcurrency = 1;
+            throw new AggregateException(exceptions);
+        }
 
-                throw e;
-            }
+        // we had no errors, re-raise max concurrency slowly
+        if (_maxConcurrency < Configuration.MaxConcurrency &&
+            // we had sufficient changes to actually use the current limit  
+            results.Count >= _maxConcurrency)
+        {
+            _maxConcurrency++;
         }
 
         return results.Count;
@@ -160,6 +163,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             context.CloseTransaction();
 
             List<Task<(string Result, string Usage)>> tasks = [];
+            Task[] executingTasks = new Task[Math.Max(1, _maxConcurrency)];
+            Array.Fill(executingTasks, Task.CompletedTask);
 
             foreach (var item in items)
             {
@@ -171,20 +176,35 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     continue; // no change, can skip
                 }
 
+                // this is how we ensure that we don't have too many outstanding tasks 
+                var idx = Task.WaitAny(executingTasks, CancellationToken);
                 statsScope.TotalSentToModel++;
 
                 string json = item.ContextOutput.Context.ToString();
-                tasks.Add(_chatCompletionClient.CompleteAsync(Configuration.Prompt, json, Database.DatabaseShutdown));
+                Task<(string Result, string Usage)> task;
+                try
+                {
+                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, CancellationToken);
+                }
+                catch (Exception e)
+                {
+                    // if we failed to _start_, we want to handle it in the same manner
+                    // and deal with the error in ProcessModelResults
+                    task = Task.FromException<(string Result, string Usage)>(e);
+                }
+
+                tasks.Add(task);
+                executingTasks[idx] = task;
             }
 
             try
             {
-                // TODO: Yuck
-                Task.WaitAll(tasks.OfType<Task>().ToArray());
+                Task.WaitAll(executingTasks, CancellationToken); // only the pending tasks remain here
             }
-            catch
+            catch (Exception)
             {
-                // we'll handle that later
+                // explicitly ignoring this, since we'll handle the error 
+                // in ProcessModelResults
             }
 
             return ProcessModelResults(items, context, tasks, statsScope);
@@ -201,49 +221,23 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             var item = items[index];
             if (task.IsCompletedSuccessfully is false)
             {
-                var singleEx = task.Exception.ExtractSingleInnerException();
-
-                if (Configuration.TestMode)
-                    throw singleEx;
-
-                switch (singleEx)
-                {
-                    case TooManyTokensException:
-                    case RefusedToAnswerException:
-                        var reason = singleEx is TooManyTokensException
-                            ? "Token limit exceeded"
-                            : "Model refused to answer";
-
-                        var msg = $"Model call failed for context in document '{item.DocId}' ({reason}). " +
-                                  $"Context was: {item.ContextOutput.Context}" + Environment.NewLine +
-                                  singleEx.Message;
-                        Statistics.RecordPartialLoadError(msg, item.DocId);
-                        Logger.Log(LogLevel.Warn, msg);
-                        break;
-                    default:
-                        item.UpdateHash = false;
-                        break;
-                }
+                var err = HandleItemError(task, item);
+                if (err is null) // can happen for refusal / too many tokens in one item, etc. (already handled) 
+                    continue;
 
                 exceptions ??= [];
-                exceptions.Add(singleEx);
-
+                exceptions.Add(err);
                 continue; // so we won't try to save it 
             }
 
             (string result, string usage) = task.Result;
 
-            //TODO: REALLY YUCKY!
-            var stream = new ReadOnlyMemoryStream<byte>(Encoding.UTF8.GetBytes(result));
             item.ModelOutput = new ModelOutput
             {
-                Output = context.Sync.ReadForMemory(stream, item.DocId)
+                Output = context.Sync.ReadForMemory(result, item.DocId)
             };
 
-            stream.Dispose();
-
-            stream = new ReadOnlyMemoryStream<byte>(Encoding.UTF8.GetBytes(usage));
-            var usageBlittable = context.Sync.ReadForMemory(stream, item.DocId);
+            var usageBlittable = context.Sync.ReadForMemory(usage, item.DocId);
             usageBlittable.TryGet("total_tokens", out int tokensUsed);
             usageBlittable.TryGet("prompt_tokens", out int promptTokens);
             usageBlittable.TryGet("completion_tokens", out int completionTokens);
@@ -256,11 +250,41 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             {
                 item.ModelOutput.Usage = usageBlittable;
             }
-
-            stream.Dispose();
         }
 
         return exceptions;
+
+        Exception HandleItemError(Task<(string Result, string Usage)> task, GenAiResultItem item)
+        {
+            var singleEx = task.Exception.ExtractSingleInnerException();
+
+            if (Configuration.TestMode)
+                throw new InvalidOperationException("Failed to run test", singleEx);
+
+            switch (singleEx)
+            {
+                // this item cannot be processed, because it has too many items, and retrying isn't going to change that
+                case TooManyTokensException:
+                // the model refused to answer about this item, and is unlikely to change its mind    
+                case RefusedToAnswerException:
+                    // in this case, we _intentionally_ want to update the hash so we will _not_ try to update this known bad
+                    // item again in the future.
+                    item.UpdateHash = true;
+                    var msg =
+                        $"Model call failed for context in document '{item.DocId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
+                        $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
+                        $"{singleEx}";
+
+                    Statistics.RecordPartialLoadError(msg, item.DocId);
+                    Logger.Log(LogLevel.Warn, msg);
+                    return null;
+                default:
+                    // something bad happened, but this isn't the fault of this item (run out of rate limit, TCP error, etc.)
+                    // we will _not_ update the hash in this case, so we *will* reprocess this item the next time
+                    item.UpdateHash = false;
+                    return singleEx;
+            }
+        }
     }
 
     private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results)
@@ -339,7 +363,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     items = testGenAiScript.Input;
                     PatchRequest req = new(Configuration.UpdateScript, PatchRequestType.GenAi);
                     PatchDocumentCommand lastPatch = null;
-                    var hashes = new DynamicJsonArray();
+                    var hashes = new List<string>();
 
                     if (testGenAiScript.Document != null)
                     {
@@ -362,7 +386,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     {
                         hashes.Add(item.ContextOutput.AiHash);
 
-                        if (item?.ModelOutput is null)
+                        if (item.ModelOutput is null)
                             continue;
 
                         var dvj = new DynamicJsonValue
