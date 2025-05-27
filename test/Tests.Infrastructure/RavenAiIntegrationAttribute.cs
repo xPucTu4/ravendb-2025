@@ -26,7 +26,7 @@ public enum RavenAiIntegration
 }
 
 public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDataAttributeBase
-where TConfig : EtlConfiguration<AiConnectionString>
+    where TConfig : EtlConfiguration<AiConnectionString>
 {
     public RavenDatabaseMode DatabaseMode { get; set; } = RavenDatabaseMode.All;
     public RavenAiIntegration IntegrationType { get; set; } = RavenAiIntegration.All;
@@ -35,11 +35,11 @@ where TConfig : EtlConfiguration<AiConnectionString>
     public bool CheckCanConnect { get; set; } = true;
     public bool ReuseConnectionString { get; set; } = true;
 
-    public AbstractRavenAiIntegrationDataAttribute()
+    protected AbstractRavenAiIntegrationDataAttribute()
     {
     }
 
-    public AbstractRavenAiIntegrationDataAttribute(params object[] data) : this()
+    protected AbstractRavenAiIntegrationDataAttribute(params object[] data) : this()
     {
         Data = data;
     }
@@ -59,7 +59,7 @@ where TConfig : EtlConfiguration<AiConnectionString>
                 using (SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting))
                 using (SetSkipValueIfNoApiKeyDefined(aiConnectionStringForTesting))
                 {
-                    var aiIntegrationConfiguration = aiConnectionStringForTesting.GetEtlConfiguration();
+                    var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();
 
                     if (Data == null || Data.Length == 0)
                     {

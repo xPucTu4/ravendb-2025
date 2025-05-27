@@ -53,7 +53,7 @@ public static class Program
     {
         var att = new RavenGenAiDataAttribute();
         var connector = att.GetAiConnectionStringsNewInstance(type, "").First();
-        var config = connector.GetEtlConfiguration();
+        var config = connector.GetAiConfiguration();
         var options = RavenTestBase.Options.ForMode(databaseMode);
         return (options, config);
     }
@@ -62,7 +62,7 @@ public static class Program
     {
         var att = new RavenAiEmbeddingsDataAttribute();
         var connector = att.GetAiConnectionStringsNewInstance(type, "").First();
-        var config = connector.GetEtlConfiguration();
+        var config = connector.GetAiConfiguration();
         var options = RavenTestBase.Options.ForMode(databaseMode);
         return (options, config);
     }

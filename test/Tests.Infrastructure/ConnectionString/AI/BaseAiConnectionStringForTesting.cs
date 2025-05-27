@@ -18,7 +18,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 public interface IAiConnectorForTesting<TConfig>
 where TConfig : EtlConfiguration<AiConnectionString>
 {
-    TConfig GetEtlConfiguration();
+    TConfig GetAiConfiguration();
     Lazy<bool> CanConnect { get; }
     Lazy<AiConnectorType> AiConnectorType { get; }
     bool MissingRequiredApiKey(out string environmentVariableName);
@@ -61,7 +61,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
     protected BaseAiConnectorForTesting()
     {
-        _aiIntegrationConfiguration = new Lazy<TConfig>(GetEtlConfiguration);
+        _aiIntegrationConfiguration = new Lazy<TConfig>(GetAiConfiguration);
         CanConnect = new Lazy<bool>(IsConnectionAllowed);
     }
 
@@ -96,7 +96,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
         return connectionString;
     }
 
-    public TConfig GetEtlConfiguration()
+    public TConfig GetAiConfiguration()
     {
         var connectionString = GetAiConnectionString();
 
@@ -155,7 +155,7 @@ public abstract class AbstractEmbeddingsConnectorForTesting<T> : BaseAiConnector
 {
     protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
-        logger = default;
+        logger = null;
 
         (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateEmbeddingServicesForTest(_aiIntegrationConfiguration.Value);
         var embeddings = service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token).GetAwaiter().GetResult();
@@ -175,6 +175,7 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
     protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
         var configuration = _aiIntegrationConfiguration.Value;
+        configuration.JsonSchema = OllamaChatCompletionClient.GetSchemaFor("{ \"Answer\" : \"answer here\" }");
         var connectorType = configuration.Connection.GetActiveProvider();
         using (var contextPool = new JsonContextPool())
         {
@@ -186,7 +187,7 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
             };
 
             logger = null;
-            var result = client.CompleteAsync(prompt: "Reply with exact word only: raven", null, token).GetAwaiter().GetResult();
+            var result = client.CompleteAsync(prompt: "Reply with exact word only: raven", "", token).GetAwaiter().GetResult();
 
             return true;
         }
