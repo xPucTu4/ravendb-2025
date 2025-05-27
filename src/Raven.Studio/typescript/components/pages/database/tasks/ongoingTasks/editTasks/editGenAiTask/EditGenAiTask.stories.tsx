@@ -23,7 +23,7 @@ export default {
 
 export const Basic: StoryObj = {
     render: () => {
-        const { cluster, collectionsTracker } = mockStore;
+        const { cluster, collectionsTracker, license } = mockStore;
         const { tasksService } = mockServices;
 
         cluster.with_Single();
@@ -32,6 +32,10 @@ export const Basic: StoryObj = {
         tasksService.withTestAiConnectionString();
         tasksService.withConnectionStrings();
         tasksService.withTestGenAi();
+
+        license.with_License({
+            HasGenAi: true,
+        });
 
         return (
             <div style={{ height: "90vh" }}>
