@@ -15,6 +15,7 @@ import EditGenAiTaskSteps from "./partials/EditGenAiTaskSteps";
 import EditGenAiTaskPlayground from "./partials/EditGenAiTaskPlayground";
 import useEditGenAiCancel from "./hooks/useEditGenAiCancel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 
 interface QueryParams {
     taskId: string;
@@ -41,6 +42,8 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
         if (queryParams) {
             dispatch(editGenAiTaskActions.sourceViewSet(queryParams.sourceView));
         }
+
+        dispatch(connectionStringsActions.viewContextSet("taskGenAi"));
 
         return () => {
             dispatch(editGenAiTaskActions.reset());

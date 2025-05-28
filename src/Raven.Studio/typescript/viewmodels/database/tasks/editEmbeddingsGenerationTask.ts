@@ -100,7 +100,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         super.activate(args);
         const deferred = $.Deferred<void>();
 
-        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("ai"));
+        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("taskEmbeddings"));
         this.sourceView(args.sourceView);
         
         this.loadPossibleMentors();
