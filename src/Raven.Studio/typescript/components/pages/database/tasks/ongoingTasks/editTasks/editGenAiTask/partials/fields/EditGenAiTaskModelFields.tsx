@@ -44,6 +44,10 @@ export default function EditGenAiTaskModelFields() {
                             position: "bottom",
                         },
                     ]}
+                    wrapEnabled
+                    setOptions={{
+                        indentedSoftWrap: false,
+                    }}
                 />
             </FormGroup>
             {formValues.schemaProvider == null && (
