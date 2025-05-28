@@ -279,7 +279,7 @@ namespace Raven.Server.Utils
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
 
-            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+            Pkcs12Store store = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
             var serverCert = DotNetUtilities.FromX509Certificate(certificateHolder.Certificate);
 
             store.Load(new MemoryStream(certBytes), Array.Empty<char>());
@@ -337,17 +337,17 @@ namespace Raven.Server.Utils
 
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
-            var authorityKeyIdentifier = new AuthorityKeyIdentifierStructure(issuerKeyPair.PublicKey);
+            var authorityKeyIdentifier = X509ExtensionUtilities.CreateAuthorityKeyIdentifier(issuerKeyPair.PublicKey);
             certificateGenerator.AddExtension(X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
             certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true, new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
             if (isClientCertificate)
             {
-                certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.IdKPClientAuth));
+                certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.id_kp_clientAuth));
             }
             else
             {
                 certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
-                    new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
+                    new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth));
             }
 
             if (isCaCertificate)
@@ -386,7 +386,7 @@ namespace Raven.Server.Utils
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
             X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
-            var store = new Pkcs12Store();
+            var store = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
             var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
@@ -432,7 +432,7 @@ namespace Raven.Server.Utils
             certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true,
                 new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.CrlSign | KeyUsage.KeyCertSign));
             certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
-                new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
+                new ExtendedKeyUsage(KeyPurposeID.id_kp_serverAuth, KeyPurposeID.id_kp_clientAuth));
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
@@ -454,15 +454,15 @@ namespace Raven.Server.Utils
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.Private, random);
 
             var authorityKeyIdentifier =
-                new AuthorityKeyIdentifier(
-                    SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(issuerKeyPair.Public),
+                X509ExtensionUtilities.CreateAuthorityKeyIdentifier(
+                    issuerKeyPair.Public,
                     new GeneralNames(new GeneralName(issuerDN)),
                     serialNumber);
             certificateGenerator.AddExtension(
                 X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
 
             var subjectKeyIdentifier =
-                new SubjectKeyIdentifier(
+                X509ExtensionUtilities.CreateSubjectKeyIdentifier(
                     SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(subjectKeyPair.Public));
             certificateGenerator.AddExtension(
                 X509Extensions.SubjectKeyIdentifier.Id, false, subjectKeyIdentifier);
@@ -473,7 +473,7 @@ namespace Raven.Server.Utils
             ca = (issuerKeyPair.Private, issuerKeyPair.Public);
             name = certificate.SubjectDN;
 
-            var store = new Pkcs12Store();
+            var store = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
             var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
@@ -652,7 +652,7 @@ namespace Raven.Server.Utils
         {
             var certWithKey = certificate.CopyWithPrivateKey(privateKey);
 
-            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+            Pkcs12Store store = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
 
             var chain = new X509Chain();
             chain.ChainPolicy.DisableCertificateDownloads = true;
@@ -812,6 +812,14 @@ namespace Raven.Server.Utils
             }
 
             return buffer;
+        }
+    }
+
+    public static class CertificateExtensions
+    {
+        public static Pkcs12Store BuildWithoutOracleOids(this Pkcs12StoreBuilder builder)
+        {
+            return builder.SetEnableOracleTrustedKeyUsage(false).Build();
         }
     }
 }

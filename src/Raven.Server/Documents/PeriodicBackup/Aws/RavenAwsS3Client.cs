@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
     {
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
-        internal Size MaxUploadPutObject = new Size(256, SizeUnit.Megabytes);
-        internal Size MinOnePartUploadSizeLimit = new Size(100, SizeUnit.Megabytes);
+        internal Size MaxUploadPutObject = new Size(1, SizeUnit.Gigabytes);
+        internal Size MinOnePartUploadSizeLimit = new Size(512, SizeUnit.Megabytes);
         internal readonly AmazonS3Config Config;
 
         private static readonly Size TotalBlocksSizeLimit = new Size(5, SizeUnit.Terabytes);
@@ -194,16 +194,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             try
             {
-                var response = await _client.ListObjectsV2Async(new ListObjectsV2Request
-                {
-                    BucketName = _bucketName,
-                    ContinuationToken = continuationToken,
-                    Delimiter = delimiter,
-                    Prefix = prefix,
-                    StartAfter = startAfter
-                }, _cancellationToken);
+                var response = await _client.ListObjectsV2Async(
+                    new ListObjectsV2Request
+                    {
+                        BucketName = _bucketName,
+                        ContinuationToken = continuationToken,
+                        Delimiter = delimiter,
+                        Prefix = prefix,
+                        StartAfter = startAfter
+                    }, _cancellationToken);
 
-                var result = new ListObjectsResult
+                var result = new ListObjectsResult 
                 {
                     ContinuationToken = response.NextContinuationToken,
                 };
@@ -217,10 +218,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
                 else
                 {
-                    result.FileInfoDetails = response
-                        .S3Objects
-                        .Select(x => new S3FileInfoDetails { FullPath = x.Key, LastModified = x.LastModified })
-                        .ToList();
+                    if (response.KeyCount > 0)
+                    {
+                        result.FileInfoDetails = response
+                            .S3Objects
+                            .Select(x => new S3FileInfoDetails { FullPath = x.Key, LastModified = x.LastModified.GetValueOrDefault() })
+                            .ToList();
+                    }
+                    else
+                    {
+                        result.FileInfoDetails = new List<S3FileInfoDetails>();
+                    }
                 }
 
                 return result;
@@ -326,9 +334,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (var cancellationToken = new CancellationTokenSource(5000))
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.Token, _cancellationToken))
             {
-                var aclResponse = await _client.GetACLAsync(_bucketName, cts.Token);
+                var aclResponse = await _client.GetBucketAclAsync(new GetBucketAclRequest { BucketName = _bucketName }, cts.Token);
                 var permissions = aclResponse
-                    .AccessControlList
                     .Grants
                     .Select(x => x.Permission.Value)
                     .ToHashSet();

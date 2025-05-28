@@ -411,7 +411,7 @@ namespace Raven.Server
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
-                    msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support@ravendb.net.";
+                    msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support at https://ravendb.net/support/request.";
                 }
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
@@ -427,7 +427,7 @@ namespace Raven.Server
                 {
                     if (ServerStore.LicenseManager.LicenseStatus.CanAutoRenewLetsEncryptCertificate)
                     {
-                        msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support@ravendb.net.";
+                        msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support at https://ravendb.net/support/request.";
                     }
                     else
                     {
@@ -2103,7 +2103,19 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
+
+                    try
+                    {
+                        (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
+                    }
+                    catch (Exception e)
+                    {
+                        if (tcpAuditLog != null)
+                        {
+                            tcpAuditLog.Info($"Failed to authenticate TCP connection '{remoteEndPoint}' with error: {e}");
+                        }
+                        throw;
+                    }
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
                         throw new Exception("Simulated TCP failure.");
@@ -2124,7 +2136,22 @@ namespace Raven.Server
                             if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
                                 throw new Exception("Simulated TCP failure.");
 
-                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            try
+                            {
+                                header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            }
+                            catch (Exception e)
+                            {
+                                if (tcpAuditLog != null)
+                                {
+                                    tcpAuditLog.Info(
+                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
+                                }
+                                throw;
+                            }
+
+                            if (tcpAuditLog != null)
+                                tcpAuditLog.Info($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
 
                             if (ShouldUseDataCompression(header))
                             {
@@ -2158,7 +2185,7 @@ namespace Raven.Server
                         finally
                         {
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Closed TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                                tcpAuditLog.Info($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
                         }
                     }
                 }
