@@ -64,7 +64,7 @@ export function useEditGenAiTaskTests() {
         const dto: Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.TestGenAiScript = {
             TestStage: "SendToModel",
             Input: input,
-            Document: JSON.parse(formValues.playgroundDocument),
+            Document: null,
             DocumentId: undefined,
             IsDelete: false,
             Configuration: editGenAiTaskUtils.mapToDto(formValues, taskId),
