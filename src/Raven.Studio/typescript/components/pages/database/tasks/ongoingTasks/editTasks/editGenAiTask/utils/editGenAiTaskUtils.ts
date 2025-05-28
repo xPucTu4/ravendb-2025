@@ -16,7 +16,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
             schemaProvider: null,
             jsonSchema: "",
             sampleObject: "",
-            update: "",
+            updateScript: "",
             isResetScript: false,
             scriptToReset: null,
             script: "",
@@ -42,7 +42,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
         schemaProvider: dto.Configuration.JsonSchema ? "jsonSchema" : "sampleObject",
         jsonSchema: dto.Configuration.JsonSchema ?? "",
         sampleObject: dto.Configuration.SampleObject ?? "",
-        update: dto.Configuration.Update ?? "",
+        updateScript: dto.Configuration.UpdateScript ?? "",
         isResetScript: true,
         scriptToReset: dto.Configuration.Transforms?.[0].Name ?? null,
         script: dto.Configuration.GenAiTransformation?.Script ?? "",
@@ -73,10 +73,11 @@ const mapToDto = (
         Prompt: data.prompt,
         JsonSchema: data.schemaProvider === "jsonSchema" ? data.jsonSchema : null,
         SampleObject: data.schemaProvider === "sampleObject" ? data.sampleObject : null,
-        Update: data.update,
+        UpdateScript: data.updateScript,
         GenAiTransformation: {
             Script: data.script,
         },
+        MaxConcurrency: undefined, // TODO kalczur ask Aviv
     };
 };
 

@@ -10,7 +10,7 @@ class testGenAiCommand extends commandBase {
     }  
 
     execute(): JQueryPromise<GenAiTestScriptResult> {
-        const url = endpoints.databases.genAi.adminAiGenaiTest;
+        const url = endpoints.databases.genAi.adminAiGenAiTest;
 
         return this.post<GenAiTestScriptResult>(url, JSON.stringify(this.payload), this.db)
             .fail((response: JQueryXHR) => {                         

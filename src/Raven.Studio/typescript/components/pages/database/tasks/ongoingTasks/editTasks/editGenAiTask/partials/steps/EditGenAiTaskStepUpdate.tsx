@@ -40,7 +40,7 @@ export function EditGenAiTaskStepUpdate() {
                 <FormAceEditor
                     aceRef={scriptRef}
                     control={control}
-                    name="update"
+                    name="updateScript"
                     mode="javascript"
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
@@ -48,7 +48,7 @@ export function EditGenAiTaskStepUpdate() {
                         {
                             component: (
                                 <AceEditor.LoadFileAction
-                                    onLoad={(value) => setValue("update", value, { shouldValidate: true })}
+                                    onLoad={(value) => setValue("updateScript", value, { shouldValidate: true })}
                                 />
                             ),
                         },
@@ -72,7 +72,7 @@ export function EditGenAiTaskStepUpdateFooter() {
     const { handleUpdateScriptTest } = useEditGenAiTaskTests();
 
     const handleNext = async () => {
-        const isValid = await trigger(["update"]);
+        const isValid = await trigger(["updateScript"]);
 
         if (isValid) {
             dispatch(editGenAiTaskActions.isTestOpenSet(false));

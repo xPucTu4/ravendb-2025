@@ -117,7 +117,7 @@ export function EditGenAiTaskStepSummary() {
                 </Button>
             </div>
             <div className="panel-bg-1 p-3 rounded-2 mt-1">
-                <RowWithPreview label="Update script" value={formValues.update} mode="javascript" />
+                <RowWithPreview label="Update script" value={formValues.updateScript} mode="javascript" />
             </div>
         </>
     );
