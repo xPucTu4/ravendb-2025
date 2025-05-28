@@ -778,8 +778,8 @@ namespace Raven.Server.Web.Authentication
                 {
                     var permissions = FormatPermissions(editedCertificate);
 
-                    LogAuditForServer("Certificates", "CHANGE", 
-                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Not After: {editedCertificate?.NotAfter}.)");
+                    LogAuditForServer("CHANGE",
+                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Not After: {editedCertificate?.NotAfter}.");
                 }
 
                 var notAfter = editedCertificate.NotAfter ?? existingCertificate.NotAfter;

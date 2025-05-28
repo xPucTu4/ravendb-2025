@@ -10,7 +10,6 @@ import { CertificatesEditFormData } from "components/pages/resources/manageServe
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { useAppSelector } from "components/store";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import { HStack } from "components/common/HStack";
 import { FlexGrow } from "components/common/FlexGrow";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
 import Collapse from "react-bootstrap/Collapse";
@@ -65,7 +64,7 @@ export default function CertificatesPermissionsField() {
                             <Card key={field.id} className="hstack rounded px-3 py-1 well">
                                 {field.databaseName}
                                 <FlexGrow />
-                                <HStack className="gap-3">
+                                <div className="hstack gap-3">
                                     <FormRadio
                                         control={control}
                                         name={`databasePermissions.${idx}.accessLevel`}
@@ -109,7 +108,7 @@ export default function CertificatesPermissionsField() {
                                             Read
                                         </FormRadio>
                                     </ConditionalPopover>
-                                </HStack>
+                                </div>
                                 <Button
                                     variant="link"
                                     className="px-0 ms-3"
