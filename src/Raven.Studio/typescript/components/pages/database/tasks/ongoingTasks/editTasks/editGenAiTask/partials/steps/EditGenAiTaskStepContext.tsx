@@ -16,10 +16,17 @@ export function EditGenAiTaskStepContext() {
     return (
         <>
             <div className="hstack justify-content-between">
-                <AboutViewHeading title="Specify task context" marginBottom={2} icon="ai-etl" />
+                <AboutViewHeading title="Generate context objects" marginBottom={2} icon="ai-etl" />
                 <EditGenAiTaskInfoHub />
             </div>
-            <p className="mb-4">TODO Description</p>
+            <p className="mb-4">
+                The context objects generated in this step will be used as input for the model.
+                <br />
+                Each context object will be sent in a separate request, along with the prompt and JSON schema defined in
+                the next step.
+                <br />
+                Use the playground to test the context generation script on a sample document.
+            </p>
             <EditGenAiTaskContextFields />
         </>
     );
@@ -62,7 +69,18 @@ export function EditGenAiTaskStepContextFooter() {
                     conditions={[
                         {
                             isActive: !formValues.playgroundDocument,
-                            message: "You need to select or provide a document to test this step.",
+                            message:
+                                "To test the context generation script, select or provide a sample document in the playground.",
+                        },
+                        {
+                            isActive: true,
+                            message: (
+                                <>
+                                    Click to test the context generation script on the sample document.
+                                    <br />
+                                    The resulting context object(s) will be shown in the results pane.
+                                </>
+                            ),
                         },
                     ]}
                 >
@@ -74,7 +92,7 @@ export function EditGenAiTaskStepContextFooter() {
                         disabled={isTestButtonDisabled}
                         icon="test"
                     >
-                        Test task context
+                        Test context
                     </ButtonWithSpinner>
                 </ConditionalPopover>
 

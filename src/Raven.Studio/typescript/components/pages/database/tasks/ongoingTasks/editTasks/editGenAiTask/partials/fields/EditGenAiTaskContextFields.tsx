@@ -27,8 +27,8 @@ export default function EditGenAiTaskContextFields() {
         <>
             <FormGroup>
                 <FormLabel>
-                    Collection name
-                    <PopoverWithHoverWrapper message="TODO">
+                    Source collection
+                    <PopoverWithHoverWrapper message="Select the collection to use as the source of documents for the task.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -36,8 +36,17 @@ export default function EditGenAiTaskContextFields() {
             </FormGroup>
             <FormGroup>
                 <FormLabel>
-                    Context extraction script
-                    <PopoverWithHoverWrapper message="TODO">
+                    Context generation script
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Use <code>ai.genContext</code> in this script to generate a{" "}
+                                <strong>context object</strong> from the source document.
+                                <br />
+                                Each context object will be passed as a separate input to the model.
+                            </>
+                        }
+                    >
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -70,12 +79,12 @@ export default function EditGenAiTaskContextFields() {
 function ScriptSyntaxHelp() {
     const code = `for(const comment of this.Comments)
 {
-    context({Text: comment.Text, Author: comment.Author, Id: comment.Id});
+    ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
 }`;
 
     return (
         <div>
-            <div>Sample context script</div>
+            <div>Sample context generation script</div>
             <Code code={code} language="javascript" elementToCopy={code} />
         </div>
     );

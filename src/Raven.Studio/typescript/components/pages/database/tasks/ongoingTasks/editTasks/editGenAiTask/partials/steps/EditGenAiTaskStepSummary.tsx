@@ -24,12 +24,16 @@ export function EditGenAiTaskStepSummary() {
     return (
         <>
             <div className="hstack justify-content-between">
-                <AboutViewHeading title="Summary of task configuration" marginBottom={2} icon="ai-etl" />
+                <AboutViewHeading title="Review task configuration" marginBottom={2} icon="ai-etl" />
                 <EditGenAiTaskInfoHub />
             </div>
-            <p className="mb-4">TODO Description</p>
+            <p className="mb-4">
+                This step summarizes your task configuration.
+                <br />
+                Please review all settings before saving the task.
+            </p>
             <div className="hstack justify-content-between">
-                <div>Basic configuration</div>
+                <div>Basic settings</div>
                 <Button variant="link" onClick={() => dispatch(editGenAiTaskActions.currentStepSet("basic"))} size="sm">
                     <Icon icon="edit" /> Edit
                 </Button>
@@ -66,7 +70,7 @@ export function EditGenAiTaskStepSummary() {
                 )}
             </div>
             <div className="hstack justify-content-between mt-4">
-                <div>Specify task context</div>
+                <div>Context input</div>
                 <Button
                     variant="link"
                     onClick={() => dispatch(editGenAiTaskActions.currentStepSet("context"))}
@@ -77,13 +81,13 @@ export function EditGenAiTaskStepSummary() {
             </div>
             <div className="panel-bg-1 p-3 rounded-2 mt-1">
                 <div className="hstack justify-content-between">
-                    <div>Collection name</div>
+                    <div>Source collection</div>
                     <div>{formValues.collectionName}</div>
                 </div>
-                <RowWithPreview label="Script" value={formValues.script} mode="javascript" />
+                <RowWithPreview label="Context generation script" value={formValues.script} mode="javascript" />
             </div>
             <div className="hstack justify-content-between mt-4">
-                <div>Model input</div>
+                <div>Prompt & schema</div>
                 <Button
                     variant="link"
                     onClick={() => dispatch(editGenAiTaskActions.currentStepSet("modelInput"))}

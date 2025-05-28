@@ -28,7 +28,15 @@ export default function EditGenAiTaskModelFields() {
             <FormGroup>
                 <FormLabel>
                     Prompt
-                    <PopoverWithHoverWrapper message="TODO">
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Define the instruction that will be sent to the model.
+                                <br />
+                                It will be applied to each context object generated in the previous step.
+                            </>
+                        }
+                    >
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -74,7 +82,7 @@ export default function EditGenAiTaskModelFields() {
                         <div className="flex-grow-1 vstack">
                             <SchemaProviderButton
                                 icon="edit"
-                                title="Provide JSON Schema manually"
+                                title="Provide JSON schema"
                                 description="Choose if you want to manually provide the schema"
                                 handleClick={() => setValue("schemaProvider", "jsonSchema")}
                             />
@@ -89,14 +97,25 @@ export default function EditGenAiTaskModelFields() {
                 <FormGroup>
                     <FormLabel className="hstack justify-content-between">
                         <div>
-                            Sample Object
-                            <PopoverWithHoverWrapper message="TODO">
+                            Sample response object
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        Enter a sample JSON object that defines the structure of the response you want
+                                        to receive from the model.
+                                        <br />
+                                        <br />
+                                        RavenDB will use this example to generate a <strong>formal JSON schema</strong>,
+                                        which will be included in the request to the model.
+                                    </>
+                                }
+                            >
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </div>
                         <Button variant="link" size="xs" onClick={() => setValue("schemaProvider", "jsonSchema")}>
                             <Icon icon="edit" />
-                            Provide JSON Schema manually
+                            Provide JSON schema
                         </Button>
                     </FormLabel>
                     <FormAceEditor
@@ -126,8 +145,19 @@ export default function EditGenAiTaskModelFields() {
                 <FormGroup>
                     <FormLabel className="hstack justify-content-between">
                         <div>
-                            JSON Schema
-                            <PopoverWithHoverWrapper message="TODO">
+                            JSON schema
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        Enter a formal JSON schema that defines the structure of the response you want
+                                        to receive from the model.
+                                        <br />
+                                        <br />
+                                        If not provided, RavenDB will generate the schema automatically based on the
+                                        sample response object.
+                                    </>
+                                }
+                            >
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </div>
@@ -206,7 +236,7 @@ function SampleObjectSyntaxHelp() {
 
     return (
         <div>
-            <div>Sample object</div>
+            <div>Sample response object</div>
             <Code code={code} elementToCopy={code} language="json" />
         </div>
     );
@@ -237,7 +267,7 @@ function JsonSchemaSyntaxHelp() {
 
     return (
         <div>
-            <div>Sample JSON Schema</div>
+            <div>Sample JSON schema</div>
             <Code code={code} elementToCopy={code} language="json" />
         </div>
     );

@@ -37,6 +37,17 @@ export default function EditGenAiTaskFormVirtualList({
         overscan: 5,
     });
 
+    const getTooltipText = (): string => {
+        if (name === "playgroundContexts") {
+            return "Context object ID";
+        }
+        if (name === "playgroundModelOutputs") {
+            return "Model output object ID";
+        }
+
+        return null;
+    };
+
     if (fields.length === 0) {
         return <EmptySet>Empty list</EmptySet>;
     }
@@ -74,7 +85,11 @@ export default function EditGenAiTaskFormVirtualList({
                                     isReadOnly={isReadOnly}
                                     handleRemove={handleRemove}
                                 />
-                                <Badge bg="secondary" style={{ position: "absolute", bottom: 10, right: 40 }}>
+                                <Badge
+                                    bg="secondary"
+                                    style={{ position: "absolute", bottom: 10, right: 40 }}
+                                    title={getTooltipText()}
+                                >
                                     {field.idx != null ? field.idx + 1 : "?"}
                                 </Badge>
                             </div>

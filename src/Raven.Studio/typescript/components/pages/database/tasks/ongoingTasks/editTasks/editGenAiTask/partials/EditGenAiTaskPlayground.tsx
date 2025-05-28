@@ -97,8 +97,14 @@ export default function EditGenAiTaskPlayground() {
         if (isSelected) {
             const isConfirmed = await confirm({
                 title: "You’re about to enter Playground edit mode",
-                message:
-                    "While you’ll be able to manipulate the element, please be aware that any changes made won’t be saved to the actual document.",
+                message: (
+                    <>
+                        While in Playground edit mode, you can modify the selected content as you wish.
+                        <br />
+                        Be aware that any changes made to the content in this mode will NOT be saved to the original
+                        element.
+                    </>
+                ),
                 actionColor: "warning",
                 confirmIcon: "arrow-right",
                 confirmText: "Enter edit mode",
@@ -156,7 +162,7 @@ export default function EditGenAiTaskPlayground() {
             <div className="hstack">
                 <div>
                     Playground
-                    <PopoverWithHoverWrapper message="TODO">
+                    <PopoverWithHoverWrapper message="Use the playground to select/enter sample content for testing the outcome of this configuration step.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </div>
@@ -181,8 +187,16 @@ export default function EditGenAiTaskPlayground() {
                                     <ConditionalPopover
                                         conditions={{
                                             isActive: currentStep !== "context" && currentStep !== "updateScript",
-                                            message:
-                                                "This configuration doesn’t give any additional context to the active step.",
+                                            message: (
+                                                <>
+                                                    The selected document has no effect on testing in this step.
+                                                    <br />
+                                                    <br />
+                                                    The test uses the context objects (generated in the previous
+                                                    playground step or customized here), along with the prompt and JSON
+                                                    schema.
+                                                </>
+                                            ),
                                         }}
                                     >
                                         <Nav.Link
@@ -199,23 +213,15 @@ export default function EditGenAiTaskPlayground() {
                                 </Nav.Item>
                                 {(currentStep === "modelInput" || currentStep === "updateScript") && (
                                     <Nav.Item onClick={() => setActiveTab("context")}>
-                                        <ConditionalPopover
-                                            conditions={{
-                                                isActive: currentStep !== "modelInput",
-                                                message:
-                                                    "This configuration doesn’t give any additional context to the active step.",
-                                            }}
+                                        <Nav.Link
+                                            eventKey="context"
+                                            className={classNames({
+                                                "text-muted": currentStep !== "modelInput",
+                                            })}
                                         >
-                                            <Nav.Link
-                                                eventKey="context"
-                                                className={classNames({
-                                                    "text-muted": currentStep !== "modelInput",
-                                                })}
-                                            >
-                                                <Icon icon="indent" />
-                                                Context
-                                            </Nav.Link>
-                                        </ConditionalPopover>
+                                            <Icon icon="indent" />
+                                            Context input
+                                        </Nav.Link>
                                     </Nav.Item>
                                 )}
                                 {currentStep === "updateScript" && (
@@ -247,7 +253,17 @@ export default function EditGenAiTaskPlayground() {
                                     className="mt-1"
                                 >
                                     Edit mode
-                                    <PopoverWithHoverWrapper message="You'll be able to manipulate the content, but beware that any changes made won't be saved outside the Playground.">
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                When in &quot;Edit mode&quot;, you can modify the content in the
+                                                Playground as you wish.
+                                                <br />
+                                                Be aware that any changes made to the content in this mode will NOT be
+                                                saved to the original element.
+                                            </>
+                                        }
+                                    >
                                         <Icon icon="info" color="info" margin="ms-1" />
                                     </PopoverWithHoverWrapper>
                                 </Switch>
@@ -266,9 +282,11 @@ export default function EditGenAiTaskPlayground() {
                                                     dispatch(editGenAiTaskActions.isDocumentInfoVisibleSet(false))
                                                 }
                                             >
-                                                In this section, you have the option to choose a document for testing.
-                                                You can either pick from the existing documents or manually enter a new
-                                                one.
+                                                In this playground area, you can select a document in order to test the
+                                                outcome of the context generation script and view the resulting context
+                                                object(s).
+                                                <br />
+                                                Choose an existing document or manually enter a new one (Edit mode).
                                             </RichAlert>
                                         )}
                                         {errors.playgroundDocument && (
@@ -277,7 +295,7 @@ export default function EditGenAiTaskPlayground() {
                                             </FormValidationMessage>
                                         )}
                                         <FormGroup>
-                                            <FormLabel>Choose document from the selected collection</FormLabel>
+                                            <FormLabel>Select a document from the source collection</FormLabel>
                                             <FormSelectAutocomplete
                                                 control={control}
                                                 name="documentId"
@@ -288,7 +306,8 @@ export default function EditGenAiTaskPlayground() {
                                             />
                                         </FormGroup>
                                         <Button variant="link" onClick={handleProvideContentManually} size="sm">
-                                            <Icon icon="edit" />I want to provide content manually
+                                            <Icon icon="edit" />
+                                            Or enter a document manually
                                         </Button>
                                     </div>
                                 )}
@@ -348,9 +367,12 @@ export default function EditGenAiTaskPlayground() {
                                         className="mb-3"
                                         onCancel={() => dispatch(editGenAiTaskActions.isContextInfoVisibleSet(false))}
                                     >
-                                        This tab provides a comprehensive overview of the context being transmitted to
-                                        the AI model. Here, you can explore the various elements and data points that
-                                        contribute to the model&apos;s understanding and processing capabilities.
+                                        This playground area shows the context objects generated in the previous step.
+                                        <br />
+                                        Alternatively, you can enter custom context objects manually using Edit mode.
+                                        <br />
+                                        You can then test the model’s response based on the combined input: the context
+                                        objects, and the prompt and schema defined in this step.
                                     </RichAlert>
                                 )}
                                 <FormGroup className="hstack justify-content-end" marginClass="mb-2">
@@ -372,7 +394,7 @@ export default function EditGenAiTaskPlayground() {
                                         className="mb-2"
                                     >
                                         <Icon icon="plus" />
-                                        Add new
+                                        Add new context object
                                     </Button>
                                 )}
                                 <div
@@ -396,8 +418,13 @@ export default function EditGenAiTaskPlayground() {
                                             dispatch(editGenAiTaskActions.isModelInputInfoVisibleSet(false))
                                         }
                                     >
-                                        Within this section, you can discover the results generated by AI model.Within
-                                        this section, you can discover the results generated by AI model.
+                                        This playground area shows the model output objects generated in the previous
+                                        step.
+                                        <br />
+                                        Alternatively, you can enter custom output objects manually using Edit mode.
+                                        <br />
+                                        You can then test to see how the &quot;update script&quot; would affect the
+                                        document that was selected in the first playground step.
                                     </RichAlert>
                                 )}
                                 {isPlaygroundEditMode && (
@@ -412,7 +439,7 @@ export default function EditGenAiTaskPlayground() {
                                         className="mb-2"
                                     >
                                         <Icon icon="plus" />
-                                        Add new
+                                        Add new output object
                                     </Button>
                                 )}
                                 <div

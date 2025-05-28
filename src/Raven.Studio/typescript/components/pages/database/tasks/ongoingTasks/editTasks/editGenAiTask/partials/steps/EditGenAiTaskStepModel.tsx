@@ -16,10 +16,15 @@ export function EditGenAiTaskStepModel() {
     return (
         <>
             <div className="hstack justify-content-between">
-                <AboutViewHeading title="Model input" marginBottom={2} icon="ai-etl" />
+                <AboutViewHeading title="Define prompt & JSON schema" marginBottom={2} icon="ai-etl" />
                 <EditGenAiTaskInfoHub />
             </div>
-            <p className="mb-4">TODO Description</p>
+            <p className="mb-4">
+                The prompt and schema defined in this step will be used as input to the model for each context object
+                generated in the previous step.
+                <br />
+                Use the playground to test the model&apos;s output on this input.
+            </p>
             <EditGenAiTaskModelFields />
         </>
     );
@@ -60,7 +65,19 @@ export function EditGenAiTaskStepModelFooter() {
                     conditions={[
                         {
                             isActive: formValues.playgroundContexts.length === 0,
-                            message: "Please add some contexts to the playground.",
+                            message:
+                                "To test the model output, either generate context objects in the previous step or enter custom ones here using Edit mode.",
+                        },
+                        {
+                            isActive: true,
+                            message: (
+                                <>
+                                    Click to test the model output using the combined input: context objects, prompt,
+                                    and schema.
+                                    <br />
+                                    The resulting output object(s) will be shown in the results pane.
+                                </>
+                            ),
                         },
                     ]}
                 >

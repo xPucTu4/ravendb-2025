@@ -26,14 +26,28 @@ export function EditGenAiTaskStepUpdate() {
     return (
         <>
             <div className="hstack justify-content-between">
-                <AboutViewHeading title="Provide document update script" marginBottom={2} icon="ai-etl" />
+                <AboutViewHeading title="Provide update script" marginBottom={2} icon="ai-etl" />
                 <EditGenAiTaskInfoHub />
             </div>
-            <p className="mb-4">TODO Description</p>
+            <p className="mb-4">
+                The &quot;update script&quot; provided in this step will be used to modify your source documents based
+                on the content of the model’s output objects.
+                <br />
+                Use the playground to test the effect of the script on a sample source document.
+            </p>
             <FormGroup>
                 <FormLabel>
                     Update script
-                    <PopoverWithHoverWrapper message="TODO">
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Provide a script to update your source documents using the model&apos;s response.
+                                <br />
+                                You can refer to <code>$input</code> (the context object) and <code>$output</code> (the
+                                model&apos;s response object) within the script.
+                            </>
+                        }
+                    >
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -128,9 +142,12 @@ export function EditGenAiTaskStepUpdateFooter() {
 }
 
 function UpdateScriptSyntaxHelp() {
-    const code = `const idx = this.Comments.findIndex(c => c.Id == $input.Id);
+    const code = `const contextObj = $input;
+const resultObj = $output;
 
-if ($output.Blocked) {
+const idx = this.Comments.findIndex(comment => comment.Id == contextObj.Id);
+
+if (resultObj.Blocked) {
     this.Comments.splice(idx, 1); // remove
 }`;
 

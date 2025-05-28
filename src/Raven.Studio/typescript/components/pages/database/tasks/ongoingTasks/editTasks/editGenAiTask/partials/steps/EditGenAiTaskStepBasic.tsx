@@ -12,6 +12,7 @@ import ConnectionTestResult from "components/common/connectionTests/ConnectionTe
 import EditGenAiTaskInfoHub from "../../EditGenAiTaskInfoHub";
 import EditGenAiTaskCancelButton from "../EditGenAiTaskCancelButton";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export function EditGenAiTaskStepBasic() {
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
@@ -22,14 +23,18 @@ export function EditGenAiTaskStepBasic() {
         <div>
             <div className="hstack justify-content-between">
                 <AboutViewHeading
-                    title="Configure GenAI task settings"
+                    title="Configure GenAI task basic settings"
                     marginBottom={2}
                     icon="ai-etl"
                     licenseBadgeText={hasGenAi ? null : "Enterprise Ai"}
                 />
                 <EditGenAiTaskInfoHub />
             </div>
-            <p className="mb-4">TODO Description</p>
+            <p className="mb-4">
+                Configure a GenAI task to analyze and enrich your documents using an LLM.
+                <br />
+                The connection string defined in this step will be used to connect to the selected model.
+            </p>
             <div className={hasGenAi ? "" : "item-disabled pe-none"}>
                 <EditGenAiTaskBasicFields />
             </div>
@@ -77,15 +82,17 @@ export function EditGenAiTaskStepBasicFooter() {
 
             {hasGenAi && (
                 <div className="hstack gap-2">
-                    <ButtonWithSpinner
-                        variant="info"
-                        className="rounded-pill"
-                        onClick={handleTest}
-                        isSpinning={connectionStringTest.status === "loading"}
-                        icon="test"
-                    >
-                        Test connection
-                    </ButtonWithSpinner>
+                    <PopoverWithHoverWrapper message="Test the connection to the specified connection string.">
+                        <ButtonWithSpinner
+                            variant="info"
+                            className="rounded-pill"
+                            onClick={handleTest}
+                            isSpinning={connectionStringTest.status === "loading"}
+                            icon="test"
+                        >
+                            Test connection
+                        </ButtonWithSpinner>
+                    </PopoverWithHoverWrapper>
 
                     <Button variant="primary" className="rounded-pill" onClick={handleNext}>
                         Next <Icon icon="arrow-right" margin="ms-1" />

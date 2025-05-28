@@ -82,8 +82,17 @@ export default function EditGenAiTaskBasicFields() {
                 <FormLabel>
                     Identifier <OptionalLabel />
                     <PopoverWithHoverWrapper
-                        message="A unique identifier used in document paths. If not specified, it will be auto-generated
-                                from the task name."
+                        message={
+                            <>
+                                A unique identifier for the task.
+                                <br />
+                                Used in the source document metadata to hold an array of unique hashes representing each
+                                model request.
+                                <br />
+                                <br />
+                                If not specified, it will be auto-generated from the task name.
+                            </>
+                        }
                     >
                         <Icon icon="info" color="info" margin="ms-1" id="identifier" />
                     </PopoverWithHoverWrapper>
