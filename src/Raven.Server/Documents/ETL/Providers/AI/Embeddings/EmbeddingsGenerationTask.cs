@@ -108,6 +108,23 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         FallbackTime = TimeSpan.FromSeconds(Math.Min(secondsToWait, max));
     }
 
+    protected override bool ExtractionLimitReached(DocumentsOperationContext ctx, EmbeddingsGenerationStatsScope stats, EmbeddingsGenerationItem currentItem, int batchSize)
+    {
+        if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationMaxBatchSize)
+        {
+            var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] {reason}");
+
+            stats.RecordBatchTransformationCompleteReason(reason);
+
+            return true;
+        }
+
+        return false;
+    }
+
     protected override int LoadInternal(IEnumerable<EmbeddingGenerationScriptResult> items, DocumentsOperationContext context, EmbeddingsGenerationStatsScope scope)
     {
         if (items is not EmbeddingsGenerationScriptRun embeddingsScriptRun)

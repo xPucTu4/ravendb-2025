@@ -545,50 +545,9 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (currentItem is ToOlapItem)
+            if (ExtractionLimitReached(ctx, stats, currentItem, batchSize))
             {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.OlapMaxNumberOfExtractedDocuments)
-                {
-                    var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"[{Name}] {reason}");
-
-                    stats.RecordBatchTransformationCompleteReason(reason);
-
-                    return false;
-                }
-            }
-            
-            else if (currentItem is EmbeddingsGenerationItem)
-            {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Ai.EmbeddingsGenerationMaxBatchSize)
-                {
-                    var reason = $"Stopping the batch because it has already processed max number of extracted documents : {stats.NumberOfExtractedItems[EtlItemType.Document]}";
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"[{Name}] {reason}");
-
-                    stats.RecordBatchTransformationCompleteReason(reason);
-
-                    return false;
-                }
-            }
-
-            else
-            {
-                if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
-                    stats.NumberOfExtractedItems.Sum(x => x.Value) >= Database.Configuration.Etl.MaxNumberOfExtractedItems)
-                {
-                    var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"[{Name}] {reason}");
-
-                    stats.RecordBatchTransformationCompleteReason(reason);
-
-                    return false;
-                }
+                return false;
             }
 
             if (stats.Duration >= Database.Configuration.Etl.ExtractAndTransformTimeout.AsTimeSpan)
@@ -659,6 +618,24 @@ namespace Raven.Server.Documents.ETL
             }
 
             return true;
+        }
+
+        protected virtual bool ExtractionLimitReached(DocumentsOperationContext ctx, TStatsScope stats, TExtracted currentItem, int batchSize)
+        {
+            if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
+                stats.NumberOfExtractedItems.Sum(x => x.Value) >= Database.Configuration.Etl.MaxNumberOfExtractedItems)
+            {
+                var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchTransformationCompleteReason(reason);
+
+                return true;
+            }
+
+            return false;
         }
 
         protected void UpdateMetrics(DateTime startTime, TStatsScope stats)

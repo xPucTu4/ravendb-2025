@@ -129,6 +129,23 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         base.EnterFallbackMode(e, lastErrorTime);
     }
 
+    protected override bool ExtractionLimitReached(DocumentsOperationContext ctx, GenAiStatsScope stats, GenAiItem currentItem, int batchSize)
+    {
+        if (stats.NumberOfExtractedItems[EtlItemType.Document] >= Configuration.MaxConcurrency * 8)
+        {
+            var reason = $"Stopping the batch because it has already processed enough items: {stats.NumberOfExtractedItems[EtlItemType.Document]}";
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] {reason}");
+
+            stats.RecordBatchTransformationCompleteReason(reason);
+
+            return true;
+        }
+
+        return false;
+    }
+
     protected override int LoadInternal(IEnumerable<GenAiScriptResult> items, DocumentsOperationContext context, GenAiStatsScope scope)
     {
         var results = PrepareItemsBeforeSendingToModel(items);
