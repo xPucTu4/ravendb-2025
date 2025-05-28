@@ -58,7 +58,7 @@ export default function EditGenAiTaskTestResults() {
                     {contextTest.data?.length === 0 ? (
                         <EmptySet>No results</EmptySet>
                     ) : (
-                        <EditGenAiTaskReadOnlyVirtualList data={contextTest.data} />
+                        <EditGenAiTaskReadOnlyVirtualList data={contextTest.data} name="playgroundContexts" />
                     )}
                 </>
             )}
@@ -93,7 +93,7 @@ export default function EditGenAiTaskTestResults() {
                     {modelInputTest.data?.length === 0 ? (
                         <EmptySet>No results</EmptySet>
                     ) : (
-                        <EditGenAiTaskReadOnlyVirtualList data={modelInputTest.data} />
+                        <EditGenAiTaskReadOnlyVirtualList data={modelInputTest.data} name="playgroundModelOutputs" />
                     )}
                 </>
             )}

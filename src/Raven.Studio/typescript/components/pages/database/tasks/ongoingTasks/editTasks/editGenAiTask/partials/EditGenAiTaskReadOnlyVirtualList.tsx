@@ -6,12 +6,15 @@ import Badge from "react-bootstrap/Badge";
 import classNames from "classnames";
 import { editGenAiTaskActions, editGenAiTaskSelectors } from "../store/editGenAiTaskSlice";
 import ReactAce from "react-ace";
+import { EditGenAiTaskFormData } from "../utils/editGenAiTaskValidation";
+import { FieldPath } from "react-hook-form";
 
 interface EditGenAiTaskReadOnlyVirtualListProps {
     data: string[];
+    name: Extract<FieldPath<EditGenAiTaskFormData>, "playgroundContexts" | "playgroundModelOutputs">;
 }
 
-export default function EditGenAiTaskReadOnlyVirtualList({ data }: EditGenAiTaskReadOnlyVirtualListProps) {
+export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGenAiTaskReadOnlyVirtualListProps) {
     const dispatch = useAppDispatch();
 
     const hoverIndex = useAppSelector(editGenAiTaskSelectors.hoverIndex);
@@ -24,6 +27,17 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data }: EditGenAiTask
         getScrollElement: () => listRef.current,
         overscan: 5,
     });
+
+    const getTooltipText = (): string => {
+        if (name === "playgroundContexts") {
+            return "Context object ID";
+        }
+        if (name === "playgroundModelOutputs") {
+            return "Model output object ID";
+        }
+
+        return null;
+    };
 
     return (
         <div className="flex-grow-1 overflow-auto" ref={listRef}>
@@ -52,7 +66,11 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data }: EditGenAiTask
                         >
                             <div style={{ position: "relative" }}>
                                 <Editor key={virtualRow.key} value={entry} />
-                                <Badge bg="secondary" style={{ position: "absolute", bottom: 10, right: 40 }}>
+                                <Badge
+                                    bg="secondary"
+                                    style={{ position: "absolute", bottom: 10, right: 40 }}
+                                    title={getTooltipText()}
+                                >
                                     {virtualRow.index + 1}
                                 </Badge>
                             </div>
