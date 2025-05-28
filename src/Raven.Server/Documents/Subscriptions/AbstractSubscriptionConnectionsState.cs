@@ -258,15 +258,14 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
             }
             catch (TimeoutException)
             {
-                if (connection._logger.IsInfoEnabled)
+                if (connection._logger.IsDebugEnabled)
                 {
-                    connection._logger.Info(
+                    connection._logger.Debug(
                         $"A connection from IP {connection.ClientUri} is starting to wait until previous connection from " +
                         $"{GetConnectionsAsString()} is released");
                 }
 
-                var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)connection.Options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                await Task.Delay(timeout, connection.CancellationTokenSource.Token);
+                await Task.Delay(random.Next(2400, 2600), CancellationTokenSource.Token);
                 await connection.SendHeartBeatIfNeededAsync(sp,
                $"A connection from IP {connection.ClientUri} is waiting for Subscription Task that is serving a connection from IP " +
                     $"{GetConnectionsAsString()} to be released");

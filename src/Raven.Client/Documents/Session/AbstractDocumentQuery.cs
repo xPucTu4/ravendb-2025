@@ -821,8 +821,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
 
-            var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }, forRange: true));
-            var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }, forRange: true));
+            var fromParameterName = AddQueryParameter(start == null ? 
+                Constants.Documents.Querying.Terms.LeftNullValueOfBetweenQuery 
+                : TransformValue(new WhereParams { Value = start, FieldName = fieldName }, forRange: true));
+            
+            var toParameterName = AddQueryParameter(end == null 
+                ? Constants.Documents.Querying.Terms.RightNullValueOfBetweenQuery 
+                : TransformValue(new WhereParams { Value = end, FieldName = fieldName }, forRange: true));
 
             var whereToken = WhereToken.Create(WhereOperator.Between, fieldName, null, new WhereToken.WhereOptions(exact, fromParameterName, toParameterName));
             tokens.AddLast(whereToken);
@@ -1527,8 +1532,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var text = fieldValueFactoryAccessor.Text;
             var texts = fieldValueFactoryAccessor.Texts;
             var embeddings = fieldValueFactoryAccessor.Embeddings;
+            var byId = fieldValueFactoryAccessor.ById;
 
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, byId, embeddingsGenerationTaskIdentifier);
         }
         
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
@@ -1542,15 +1548,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var text = embeddingValueFactory.Text;
             var texts = embeddingValueFactory.Texts;
             var embeddings = embeddingValueFactory.Embeddings;
+            var byId = embeddingValueFactory.ById;
             
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, byId, embeddingsGenerationTaskIdentifier);
         }
         
         private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? minimumSimilarity,
-            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string embeddingsGenerationTaskIdentifier = null)
+            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string byId, string embeddingsGenerationTaskIdentifier = null)
         {
             string queryParameterName;
-            
+
+            bool isDocumentId = string.IsNullOrEmpty(byId) is false;
             if (text != null)
                 queryParameterName = AddQueryParameter(text);
             else if (texts != null)
@@ -1576,12 +1584,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     _  => embeddings
                 });
             }
+            else if (isDocumentId)
+            {
+                queryParameterName = AddQueryParameter(byId);
+            }
             else
             {
-                throw new InvalidOperationException("Cannot use VectorSearch without text(s) or embedding(s).");
+                throw new InvalidOperationException("Cannot use VectorSearch without text(s), document id or embedding(s).");
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, embeddingsGenerationTaskIdentifier);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, isDocumentId, embeddingsGenerationTaskIdentifier);
 
             WhereTokens.AddLast(vectorSearchToken);
         }
@@ -1763,6 +1775,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var lastToken = tokens.Last.Value;
 
+            if (lastToken is TrueToken)
+            {
+                tokens.AddLast(GetDefaultOperatorToken());
+                return;
+            }
+
             if (lastToken is WhereToken == false && lastToken is CloseSubclauseToken == false)
                 return;
 
@@ -1779,12 +1797,18 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 current = current.Previous;
             }
 
-            var token = DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or;
+            var token = GetDefaultOperatorToken();
 
             if (lastWhere.Options?.SearchOperator != null)
                 token = QueryOperatorToken.Or; // default to OR operator after search if AND was not specified explicitly
 
             tokens.AddLast(token);
+            return;
+
+            QueryOperatorToken GetDefaultOperatorToken()
+            {
+                return DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or;
+            }
         }
 
         private IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)

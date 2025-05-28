@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.GetAttachmentTypeByKey(attachment.Key) != AttachmentType.Revision,
+                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) != AttachmentType.Revision,
                                             "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
@@ -546,13 +546,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     {
                                         AssertAttachmentsFromReplication(context, doc);
                                     }
-                                    catch (MissingAttachmentException)
+                                    catch (MissingAttachmentException mae)
                                     {
-                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
-                                        {
-                                            throw;
-                                        }
-
                                         database.NotificationCenter.Add(AlertRaised.Create(
                                             database.Name,
                                             "Incoming Replication",
@@ -560,6 +555,14 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
                                             AlertType.ReplicationMissingAttachments,
                                             NotificationSeverity.Warning));
+                                        
+                                        if (_replicationInfo.Logger.IsDebugEnabled)
+                                            _replicationInfo.Logger.Debug("Detected missing attachment while processing incoming document.", mae);
+
+                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
+                                        {
+                                            throw;
+                                        }
                                     }
                                 }
 

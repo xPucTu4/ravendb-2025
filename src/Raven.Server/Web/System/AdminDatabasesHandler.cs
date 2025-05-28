@@ -18,6 +18,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -545,6 +546,7 @@ namespace Raven.Server.Web.System
                 var cancelToken = CreateBackgroundOperationToken();
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource, out var configurationJsonForAudit, out var restoreType, cancelToken);
+                await restoreSource.ValidateConfigurationsAsync();
 
                 if (restoreConfiguration.ShardRestoreSettings != null)
                 {
@@ -642,7 +644,11 @@ namespace Raven.Server.Web.System
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditForServer("DELETE", $"Attempt to delete database(s) [{string.Join(", ", parameters.DatabaseNames)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
+                    var msg = $"Attempt to delete database(s) [{string.Join(", ", parameters.DatabaseNames)}])";
+                    if (parameters.FromNodes is { Length: > 0 })
+                        msg += $" from nodes [{string.Join(", ", parameters.FromNodes)}]";
+                    
+                    LogAuditForServer("DELETE", msg);
                 }
 
                 using (context.OpenReadTransaction())
@@ -722,7 +728,11 @@ namespace Raven.Server.Web.System
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    LogAuditForServer("DELETE", $"Database(s) [{string.Join(", ", databasesToDelete)}] from ({string.Join(", ", parameters.FromNodes ?? Enumerable.Empty<string>())})");
+                    var msg = $"Database(s) [{string.Join(", ", parameters.DatabaseNames)}])";
+                    if (parameters.FromNodes is { Length: > 0 })
+                        msg += $" from nodes [{string.Join(", ", parameters.FromNodes)}]";
+                    
+                    LogAuditForServer("DELETE", msg);
                 }
 
                 long index = -1;
@@ -881,6 +891,11 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "indexes/toggle");
                 var parameters = JsonDeserializationServer.Parameters.DisableDatabaseToggleParameters(json);
 
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                {
+                    LogAuditForServer(enable ? "ENABLE" : "DISABLE", $"Indexing for databases: [{string.Join(", ", parameters.DatabaseNames)}]");
+                }
+                
                 var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Indexes, parameters.DatabaseNames, enable == false, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
@@ -899,6 +914,11 @@ namespace Raven.Server.Web.System
                 Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
             {
                 throw licenseLimit;
+            }
+            
+            if (RavenLogManager.Instance.IsAuditEnabled)
+            {
+                LogAuditForDatabase(name, enable ? "ENABLE" : "DISABLE", "Dynamic database distribution");
             }
 
             var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new[] { name }, enable == false, $"{raftRequestId}");
@@ -943,6 +963,11 @@ namespace Raven.Server.Web.System
                     });
                 }
 
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                {
+                    LogAuditForServer(disable ? "DISABLE" : "ENABLE", $"Database(s): [{string.Join(", ", parameters.DatabaseNames)}]");
+                }
+                
                 var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Databases, parameters.DatabaseNames, disable, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
@@ -977,6 +1002,10 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                {
+                    LogAuditForDatabase(name, "PROMOTE", $"Node '{nodeTag}'");
+                }
                 var (index, _) = await ServerStore.PromoteDatabaseNode(name, nodeTag, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
@@ -1071,6 +1100,10 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
                 var conflictResolver = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ConflictSolver>(json, "convert-conflict-resolver");
 
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                {
+                    LogAuditForDatabase(name, "CHANGE", $"Conflict solver configuration: {json}");
+                }
                 var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
@@ -1252,6 +1285,11 @@ namespace Raven.Server.Web.System
 
                 using (var token = CreateHttpRequestBoundTimeLimitedOperationToken(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                     await ValidateUnusedIdsAsync(unusedIds, database, token.Token);
+            }
+
+            if (RavenLogManager.Instance.IsAuditEnabled)
+            {
+                LogAuditForDatabase(database, "CHANGE", $"Unused database IDs: [{string.Join(", ", unusedIds)}]");
             }
 
             var command = new UpdateUnusedDatabaseIdsCommand(database, unusedIds, GetRaftRequestIdFromQuery());

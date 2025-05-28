@@ -2,6 +2,10 @@ function CreateNugetPackage ( $srcDir, $targetFilename, $versionSuffix ) {
     $command = "dotnet" 
     $commandArgs = @( "pack" )
 
+    $commandArgs += "/p:DebugType=portable"
+    $commandArgs += "/p:EmbedUntrackedSources=true"
+    $commandArgs += "/p:IncludeSymbols=true"
+    $commandArgs += "/p:SymbolPackageFormat=snupkg"
     $commandArgs += "/p:GenerateDocumentationFile=true"
     $commandArgs += @( "--output", $targetFilename )
     $commandArgs += @( "--configuration", "Release" )
@@ -98,6 +102,10 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     CopyLicenseFile($EMBEDDED_OUT_DIR);
     CopyIconFile($EMBEDDED_OUT_DIR);
     
+    $readmeDst = [io.path]::combine($EMBEDDED_OUT_DIR, "README.md")
+    $readme = [io.path]::combine($EMBEDDED_SRC_DIR, "README.md")
+    Copy-Item $readme -Destination $readmeDst
+
     try {
         Push-Location $EMBEDDED_OUT_DIR
         $command = "../../scripts/assets/bin/nuget.exe"

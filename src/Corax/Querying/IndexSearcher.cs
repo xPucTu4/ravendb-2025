@@ -118,18 +118,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
-    {
-        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-
-        InitializeSpecialTermsMarkers();
-        
-        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers);
-    }
-
-    public unsafe EntryTermsReader GetEntryTermsReader(long id, ref Page p)
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
     {
         if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
@@ -570,9 +559,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             _nullTermsMarkersLoaded = true;
             
             InitNullPostingList();
-            
-            if (_nullPostingListsTree != null)
-                LoadSpecialTermMarkers(_nullPostingListsTree, out _nullTermsMarkers);
+            LoadSpecialTermMarkers(_nullPostingListsTree, out _nullTermsMarkers);
         }
 
         if (_nonExistingTermsMarkersLoaded == false)
@@ -580,9 +567,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             _nonExistingTermsMarkersLoaded = true;
             
             InitNonExistingPostingList();
-            
-            if (_nonExistingPostingListsTree != null)
-                LoadSpecialTermMarkers(_nonExistingPostingListsTree, out _nonExistingTermsMarkers);
+            LoadSpecialTermMarkers(_nonExistingPostingListsTree, out _nonExistingTermsMarkers);
         }
 
         _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
@@ -591,6 +576,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public static void LoadSpecialTermMarkers(Tree postingList, out HashSet<long> termsMarkers)
     {
         termsMarkers = new HashSet<long>();
+        
+        // In case when posting list does not exist, we will return an empty hashset to prevent NRE.
+        if (postingList is null)
+            return;
+        
         using (var it = postingList.Iterate(prefetch: false))
         {
             if (it.Seek(Slices.BeforeAllKeys))

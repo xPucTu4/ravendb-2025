@@ -131,6 +131,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                      List<ReadOnlyMemory<byte>> cachedEmbeddingsBuffers = [];
                      foreach (var chunkedValue in TextChunker.Chunk(value, chunking))
                      {
+                         if(string.IsNullOrWhiteSpace(chunkedValue))
+                             continue; // this can happen if we have just spaces, or if we have an HTML with just <img/>, etc.
+                         
                          if (TryGetFromCache(documentsContext, chunkedValue, cacheDuration, ref expirationRefresh, out var cachedEntry))
                          {
                              cachedEmbeddingsBuffers.Add(cachedEntry);
@@ -161,7 +164,6 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                   Configuration.Quantization
              );
          }
-
 
         public ValueTask<ReadOnlyMemory<ReadOnlyMemory<byte>>> GetEmbeddingsForQueryAsync(
             DocumentsOperationContext documentsContext, 
@@ -364,8 +366,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                         $"('{RavenConfiguration.GetKey(x => x.Ai.EmbeddingsGenerationMaxBatchSize)}') or increasing the " +
                         $"limits on your model deployment.", httpOperationException);
                 }
-
-
+                
                 PortableExceptions.ThrowIf<IOException>(allEmbeddings.Count != batch.Count, "Model returned a different count of embeddings than expected");
 
                 for (int i = 0; i < allEmbeddings.Count; i++)
@@ -396,9 +397,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             }
         }
 
-        public bool ModifiedFrom(EmbeddingsGenerationConfiguration updated, AiConnectionString updateConnectionString)
+        public bool ModifiedFrom(EmbeddingsGenerationConfiguration updated, AiConnectionString updateConnectionString, Dictionary<string, AiConnectionString> connectionStrings)
         {
-            return Configuration.Compare(updated) != EtlConfigurationCompareDifferences.None ||
+            return Configuration.Compare(updated, connectionStrings) != EtlConfigurationCompareDifferences.None ||
                    _connectionString.Compare(updateConnectionString) != AiSettingsCompareDifferences.None;
         }
 
@@ -699,7 +700,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             var newConStr = GetConnectionString(record, configuration);
 
-            if (existing.ModifiedFrom(configuration, newConStr))
+            if (existing.ModifiedFrom(configuration, newConStr, record.AiConnectionStrings))
             {
                 if (_workers.TryRemove(identifier, out var toDispose))
                 {
@@ -725,7 +726,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     public VectorEmbeddingType GetQuantizationOf(EmbeddingsGenerationTaskIdentifier taskId)
     {
-        if(_workers.TryGetValue(taskId, out var worker)is false)
+        if (_workers.TryGetValue(taskId, out var worker) is false)
             return VectorEmbeddingType.Single;
         return worker.Configuration.Quantization;
     }
@@ -736,7 +737,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         params ReadOnlySpan<string> values)
     {
         var valueTask = GetEmbeddingsForQueryAsync(documentsContext, taskId, values);
-        if(valueTask.IsCompletedSuccessfully)
+        if (valueTask.IsCompletedSuccessfully)
             return valueTask.Result;
         
         return valueTask.AsTask().GetAwaiter().GetResult();
@@ -747,7 +748,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         EmbeddingsGenerationTaskIdentifier taskId,
         params ReadOnlySpan<string> values)
     {
-        if(_workers.TryGetValue(taskId, out var worker) is false)
+        if (_workers.TryGetValue(taskId, out var worker) is false)
         {
             throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{taskId.Value}' identifier");
         }

@@ -272,22 +272,6 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
-                    .UseNLog(new NLogAspNetCoreOptions
-                    {
-                        //RegisterServiceProvider = false,
-                        //IncludeScopes = false,
-                        //CaptureMessageProperties = false,
-                        //CaptureMessageTemplates = false,
-                        //CaptureEventId = EventIdCaptureType.None,
-                        //IgnoreEmptyEventId = true,
-                        //RegisterHttpContextAccessor = false,
-                        //AutoShutdown = false,
-                        //IncludeActivityIdsWithBeginScope = false,
-                        //ParseMessageTemplates = false,
-                        //RemoveLoggerFactoryFilter = false,
-                        //ReplaceLoggerFactory = false,
-                        //ShutdownOnDispose = false
-                    })
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)
@@ -328,6 +312,18 @@ namespace Raven.Server
                         services.AddSingleton(this);
                         services.Configure<FormOptions>(options => { options.MultipartBodyLengthLimit = long.MaxValue; });
                     });
+
+                if (Configuration.Logs.MicrosoftEnabled)
+                {
+                    webHostBuilder = webHostBuilder.UseNLog(
+                        new NLogAspNetCoreOptions
+                        {
+                            IncludeScopes = false, 
+                            CaptureMessageTemplates = false, 
+                            RegisterHttpContextAccessor = false, 
+                            IncludeActivityIdsWithBeginScope = false,
+                        });
+                }
 
                 _webHost = webHostBuilder.Build();
             }
@@ -577,7 +573,7 @@ namespace Raven.Server
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
-                    msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support@ravendb.net.";
+                    msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support at https://ravendb.net/support/request.";
                 }
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
@@ -593,7 +589,7 @@ namespace Raven.Server
                 {
                     if (ServerStore.LicenseManager.LicenseStatus.CanAutoRenewLetsEncryptCertificate)
                     {
-                        msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support@ravendb.net.";
+                        msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support at https://ravendb.net/support/request.";
                     }
                     else
                     {
@@ -2292,7 +2288,19 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream).ConfigureAwait(false);
+
+                    try
+                    {
+                        (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_auditLogger.IsAuditEnabled)
+                        {
+                            _auditLogger.Audit($"Failed to authenticate TCP connection '{remoteEndPoint}' with error: {e}");
+                        }
+                        throw;
+                    }
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
                         throw new Exception("Simulated TCP failure.");
@@ -2313,7 +2321,22 @@ namespace Raven.Server
                             if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
                                 throw new Exception("Simulated TCP failure.");
 
-                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, _auditLogger, cert, tcp).ConfigureAwait(false);
+                            try
+                            {
+                                header = await NegotiateOperationVersion(stream, buffer, tcpClient, _auditLogger, cert, tcp).ConfigureAwait(false);
+                            }
+                            catch (Exception e)
+                            {
+                                if (_auditLogger.IsAuditEnabled)
+                                {
+                                    _auditLogger.Audit(
+                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
+                                }
+                                throw;
+                            }
+
+                            if (_auditLogger.IsAuditEnabled)
+                                _auditLogger.Audit($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
 
                             if (ShouldUseDataCompression(header))
                             {
@@ -2347,7 +2370,7 @@ namespace Raven.Server
                         finally
                         {
                             if (_auditLogger.IsAuditEnabled)
-                                _auditLogger.Audit($"Closed TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                                _auditLogger.Audit($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
                         }
                     }
                 }

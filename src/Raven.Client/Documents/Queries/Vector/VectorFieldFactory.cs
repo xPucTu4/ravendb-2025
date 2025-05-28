@@ -18,7 +18,7 @@ public interface IVectorFieldFactory<T>
     /// <param name="fieldName">Name of the document field containing text data.</param>
     public IVectorEmbeddingTextField WithText(string fieldName);
     
-    /// <inheritdoc cref="WithText(string,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
+    /// <inheritdoc cref="WithText(string)"/>
     /// <param name="propertySelector">Path to the document field containing text data.</param>
     public IVectorEmbeddingTextField WithText(Expression<Func<T, object>> propertySelector);
     
@@ -29,7 +29,7 @@ public interface IVectorFieldFactory<T>
     /// <param name="storedEmbeddingQuantization">Quantization that was performed on stored embeddings.</param>
     public IVectorEmbeddingField WithEmbedding(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
-    ///<inheritdoc cref="WithEmbedding(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
+    ///<inheritdoc cref="WithEmbedding(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType)"/>
     /// <param name="propertySelector">Path to the document field containing embedding data.</param>
     public IVectorEmbeddingField WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
@@ -40,7 +40,7 @@ public interface IVectorFieldFactory<T>
     /// <param name="storedEmbeddingQuantization">Quantization of stored embeddings.</param>
     public IVectorEmbeddingField WithBase64(string fieldName, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
     
-    /// <inheritdoc cref="WithBase64(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType,Raven.Client.Documents.Indexes.Vector.VectorIndexingStrategy)"/>
+    /// <inheritdoc cref="WithBase64(string,Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType)"/>
     public IVectorEmbeddingField WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization = Constants.VectorSearch.DefaultEmbeddingType);
 
     /// <summary>
@@ -210,6 +210,11 @@ public interface IVectorEmbeddingTextFieldValueFactory
     /// </summary>
     /// <param name="text">Queried text.</param>
     public void ByText(string text);
+
+    /// <summary>
+    /// Query by the embedding(s) indexed from the specified document for the queried field. 
+    /// </summary>
+    public void ForDocument(string documentId);
     
     /// <summary>
     /// Defines queried texts.
@@ -288,6 +293,7 @@ public interface IVectorFieldValueFactoryAccessor
 {
     internal object Embeddings { get; set; }
     internal string Text { get; set; }
+    internal string ById { get; set; }
     internal IEnumerable<string> Texts { get; set; }
 }
 
@@ -295,6 +301,7 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
 {
     public object Embeddings { get; set; }
     public string Text { get; set; }
+    public string ById { get; set; }
     public IEnumerable<string> Texts { get; set; }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(IEnumerable<T> embedding)
@@ -357,4 +364,8 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
         Embeddings = embedding;
     }
 
+    public void ForDocument(string documentId)
+    {
+        ById = documentId;
+    }
 }
