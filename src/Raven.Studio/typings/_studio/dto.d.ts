@@ -1078,6 +1078,15 @@ type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.Connect
 type AzureQueueStorageAuthenticationType = "connectionString" | "entraId" | "passwordless";
 type AmazonSqsAuthenticationType = "basic" | "passwordless";
 
+type CertificateDto = Partial<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition> & { HasTwoFactor?: boolean; }
+
+type CertificatesResponseDto = {
+    Certificates: CertificateDto[],
+    LoadedServerCert: string,
+    WellKnownAdminCerts: string[],
+    WellKnownIssuers: string[]
+}
+
 type GenAiConfiguration = Omit<Raven.Client.Documents.Operations.AI.GenAiConfiguration, "Identifier">;
 
 type AiConnectionStringsSettings =
