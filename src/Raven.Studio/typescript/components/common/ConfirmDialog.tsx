@@ -6,7 +6,7 @@ import Button from "react-bootstrap/Button";
 import Modal from "./Modal";
 import { ModalProps } from "react-bootstrap/Modal";
 
-interface ConfirmOptions {
+export interface ConfirmOptions {
     title: ReactNode;
     icon?: IconName;
     actionColor?: ThemeColor;
