@@ -1,0 +1,14 @@
+{
+    "Emails": [
+        "admin@example.com",
+        "admin@example.net"
+    ],
+    "RootDomains": [
+        "example.com",
+        "example.net"
+    ],
+    "Domains": {
+        "db1": [ ],
+        "db2": [ ]
+    }
+}
